@@ -349,9 +349,9 @@
       }
 
       const grupoInicial = (grupoActual && grupos.includes(grupoActual)) ? grupoActual : grupos[0];
-      let html = `<div class="tabs" id="subtabs-g" style="flex-wrap:wrap;">`;
+      let html = `<div id="subtabs-g" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px;">`;
       grupos.forEach(g => {
-        html += `<button class="tab ${g===grupoInicial?'active':''}" onclick="cambiarSubgrupo(this,'${g}')">Grupo ${g}</button>`;
+        html += `<button class="tab ${g===grupoInicial?'active':''}" onclick="cambiarSubgrupo(this,'${g}')" style="padding:8px 4px; font-size:0.78rem; text-align:center; width:100%;">Grupo ${g}</button>`;
       });
       html += `</div><div id="contenido-grupo"></div>`;
       container.innerHTML = html;

@@ -134,9 +134,9 @@
       }
 
       // Sub-tabs de grupos
-      let html = `<div class="tabs" id="subtabs-grupos" style="flex-wrap:wrap;">`;
+      let html = `<div id="subtabs-grupos" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px;">`;
       grupos.forEach((g, i) => {
-        html += `<button class="tab ${i===0?'active':''}" onclick="cambiarSubgrupo(this,'${g}')">Grupo ${g}</button>`;
+        html += `<button class="tab ${i===0?'active':''}" onclick="cambiarSubgrupo(this,'${g}')" style="padding:8px 4px; font-size:0.78rem; text-align:center; width:100%;">Grupo ${g}</button>`;
       });
       html += `</div><div id="contenido-grupo"></div>`;
 
