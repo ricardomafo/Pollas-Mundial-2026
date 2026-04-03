@@ -310,6 +310,10 @@
       document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       faseActual = fase;
+      const c = document.getElementById('partidos-container');
+      c.classList.remove('tab-content-enter');
+      void c.offsetWidth;
+      c.classList.add('tab-content-enter');
       renderizarPartidos(fase);
     }
 

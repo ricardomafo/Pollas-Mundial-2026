@@ -96,6 +96,10 @@
       document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       faseActual = fase;
+      const c = document.getElementById('contenido');
+      c.classList.remove('tab-content-enter');
+      void c.offsetWidth; // forzar reflow
+      c.classList.add('tab-content-enter');
       renderFase(fase);
     }
 

@@ -192,6 +192,7 @@
     }
 
     function mostrarBienvenida(participante) {
+      document.getElementById('registro-section').classList.add('hidden');
       document.getElementById('bienvenida-section').classList.remove('hidden');
       document.getElementById('nombre-bienvenida').textContent = participante.nombre;
       document.getElementById('avatar-grande').textContent = participante.nombre.charAt(0).toUpperCase();
@@ -380,7 +381,8 @@
         localStorage.setItem('mundial_user_id', participante.id);
         localStorage.setItem('mundial_user_nombre', participante.nombre);
         localStorage.setItem('mundial_user_grupo', participante.grupo);
-        window.location.href = 'predicciones.html';
+        usuarioActual = participante;
+        mostrarBienvenida(participante);
       } catch (e) {
         console.error(e);
         errorEl.textContent = 'Error al registrarse. Comprueba tu conexión.';
