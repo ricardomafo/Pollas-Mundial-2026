@@ -28,7 +28,7 @@
 
       <div class="card" style="margin-bottom: 16px;">
         <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 4px;">¡Bienvenido a la polla!</h2>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 20px;">Entra tu nombre para unirte a la polla familiar</p>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 20px;">Entra tu nombre y código para unirte o para volver a entrar a tu cuenta.</p>
 
         <label style="display:block; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Tu nombre</label>
         <input
@@ -53,7 +53,7 @@
         />
         <p id="grupo-nombre" style="font-size:0.8rem; color:var(--green); min-height:18px; margin-bottom:12px;"></p>
         <button id="btn-unirse" class="btn-primary" onclick="registrarse()">
-          Unirme a la polla 🎯
+          Entrar / Unirme 🎯
         </button>
         <p id="registro-error" class="hidden" style="color: var(--red); font-size: 0.85rem; margin-top: 10px;"></p>
       </div>
@@ -386,7 +386,7 @@
         errorEl.textContent = 'Error al registrarse. Comprueba tu conexión.';
         errorEl.classList.remove('hidden');
         btn.disabled = false;
-        btn.textContent = 'Unirme a la polla 🎯';
+        btn.textContent = 'Entrar / Unirme 🎯';
       }
     }
 
