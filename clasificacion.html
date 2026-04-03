@@ -46,27 +46,64 @@
         <p class="card-title" style="margin-bottom:14px;">Sistema de puntuación</p>
 
         <!-- Puntos por resultado -->
-        <p style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Por partido</p>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
-          <span style="font-size:0.85rem; color:var(--text);">🎯 Marcador exacto</span>
-          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">4 pts</span>
+        <p style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Por partido <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.7rem;">(toca para ver ejemplo)</span></p>
+
+        <div onclick="toggleEjemplo('ej1')" style="cursor:pointer; border-radius:8px; background:var(--surface3); margin-bottom:6px; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px;">
+            <span style="font-size:0.85rem; color:var(--text);">🎯 Marcador exacto</span>
+            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">4 pts</span>
+          </div>
+          <div id="ej1" style="display:none; padding:8px 12px 10px; border-top:1px solid var(--border);">
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Predijiste <strong style="color:var(--text);">2 - 1</strong> · Resultado <strong style="color:var(--gold);">2 - 1</strong> ✓ Ambos marcadores correctos</p>
+          </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
-          <span style="font-size:0.85rem; color:var(--text);">✓+ Resultado + un marcador</span>
-          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">3 pts</span>
+
+        <div onclick="toggleEjemplo('ej2')" style="cursor:pointer; border-radius:8px; background:var(--surface3); margin-bottom:6px; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px;">
+            <span style="font-size:0.85rem; color:var(--text);">✓+ Resultado + un marcador</span>
+            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">3 pts</span>
+          </div>
+          <div id="ej2" style="display:none; padding:8px 12px 10px; border-top:1px solid var(--border);">
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Predijiste <strong style="color:var(--text);">2 - 1</strong> · Resultado <strong style="color:var(--gold);">2 - 0</strong> ✓ Ganó local y acertaste el 2</p>
+          </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
-          <span style="font-size:0.85rem; color:var(--text);">✓ Solo resultado</span>
-          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">2 pts</span>
+
+        <div onclick="toggleEjemplo('ej3')" style="cursor:pointer; border-radius:8px; background:var(--surface3); margin-bottom:6px; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px;">
+            <span style="font-size:0.85rem; color:var(--text);">✓ Solo resultado</span>
+            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">2 pts</span>
+          </div>
+          <div id="ej3" style="display:none; padding:8px 12px 10px; border-top:1px solid var(--border);">
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Predijiste <strong style="color:var(--text);">2 - 1</strong> · Resultado <strong style="color:var(--gold);">3 - 0</strong> ✓ Ganó local, pero ningún marcador</p>
+          </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
-          <span style="font-size:0.85rem; color:var(--text);">~ Un marcador, resultado mal</span>
-          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">1 pt</span>
+
+        <div onclick="toggleEjemplo('ej4')" style="cursor:pointer; border-radius:8px; background:var(--surface3); margin-bottom:6px; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px;">
+            <span style="font-size:0.85rem; color:var(--text);">~ Un marcador, resultado mal</span>
+            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">1 pt</span>
+          </div>
+          <div id="ej4" style="display:none; padding:8px 12px 10px; border-top:1px solid var(--border);">
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Predijiste <strong style="color:var(--text);">2 - 1</strong> · Resultado <strong style="color:var(--gold);">0 - 1</strong> ✗ Ganó visitante, pero acertaste el 1</p>
+          </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
-          <span style="font-size:0.85rem; color:var(--text);">✗ Ninguna</span>
-          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">0 pts</span>
+
+        <div onclick="toggleEjemplo('ej5')" style="cursor:pointer; border-radius:8px; background:var(--surface3); margin-bottom:6px; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px;">
+            <span style="font-size:0.85rem; color:var(--text);">✗ Ninguna</span>
+            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">0 pts</span>
+          </div>
+          <div id="ej5" style="display:none; padding:8px 12px 10px; border-top:1px solid var(--border);">
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Predijiste <strong style="color:var(--text);">2 - 1</strong> · Resultado <strong style="color:var(--gold);">0 - 0</strong> ✗ Ni el resultado ni los marcadores</p>
+          </div>
         </div>
+
+        <script>
+          function toggleEjemplo(id) {
+            const el = document.getElementById(id);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+          }
+        </script>
 
         <div style="height:1px; background:var(--border); margin:14px 0;"></div>
 
