@@ -279,7 +279,7 @@
 
           const predHtml = pred
             ? `<div style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.72rem;color:var(--text-muted);">
-                Tu pick: <strong style="color:var(--gold-light);">${pred.goles_local} – ${pred.goles_visitante}</strong>
+                Tu predicción: <strong style="color:var(--gold-light);">${pred.goles_local} – ${pred.goles_visitante}</strong>
                 ${jugado ? `<span class="pts-badge ${(t=>t==='exacto'?'pts-exacto':t==='parcial'?'pts-parcial':t==='correcto'?'pts-correcto':t==='marcador'?'pts-marcador':'pts-fallo')(scoring.getTipoAcierto(pred,p))}">${scoring.calcularPuntos(pred,p)>0?'+'+scoring.calcularPuntos(pred,p):'0'} pts</span>` : ''}
                </div>`
             : `<div style="margin-top:6px;text-align:center;font-size:0.72rem;color:var(--text-muted);">Sin predicción</div>`;
