@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Predicciones - Mundial 2026</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body style="min-height:100vh; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));">
+
+  <header class="app-header" style="text-align:left; padding:14px 20px;">
+    <div class="max-w-app" style="display:flex; align-items:center; gap:12px;">
+      <a href="index.html" style="color:var(--text-muted); text-decoration:none; display:flex; align-items:center;">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 style="font-size:1.6rem;">MIS PREDICCIONES</h1>
+        <p id="header-nombre" style="color:var(--text-muted); font-size:0.72rem; margin:0;"></p>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-app" style="padding:0 16px;">
+
+    <!-- CAMPEÓN -->
+    <div style="position:sticky; top:60px; z-index:30; padding:10px 0 4px; background:var(--bg);">
+      <div class="card" style="background:var(--surface2); border-color:rgba(201,168,76,0.25); margin-bottom:0; padding:14px 16px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div>
+            <p style="font-weight:700; color:var(--gold); font-size:0.85rem; margin:0;">CAMPEÓN DEL MUNDIAL</p>
+            <p style="color:var(--text-muted); font-size:0.72rem; margin:2px 0 0;">+10 puntos si aciertas</p>
+          </div>
+          <span id="campeon-guardado" class="saved-indicator hidden" style="margin-left:auto;">Guardado</span>
+        </div>
+        <div id="campeon-editable" style="display:flex; gap:8px;">
+          <select id="campeon-select" class="input-field" style="flex:1;">
+            <option value="">Elige un equipo</option>
+          </select>
+          <button onclick="guardarCampeon()" class="btn-gold btn-sm" style="white-space:nowrap; font-size:0.8rem;">
+            Guardar
+          </button>
+        </div>
+        <div id="campeon-bloqueado" class="hidden" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface3); border-radius:8px;">
+          <span id="campeon-nombre-bloqueado" style="flex:1; font-weight:700; font-size:0.95rem; color:var(--gold-light);"></span>
+          <span class="saved-indicator">Guardado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs" style="margin-top:10px;">
+      <button class="tab active" data-fase="grupos"          onclick="cambiarTab(this,'grupos')">Grupos</button>
+      <button class="tab"        data-fase="octavos"         onclick="cambiarTab(this,'octavos')">16avos</button>
+      <button class="tab"        data-fase="cuartos"         onclick="cambiarTab(this,'cuartos')">8vos</button>
+      <button class="tab"        data-fase="semis"           onclick="cambiarTab(this,'semis')">4tos</button>
+      <button class="tab"        data-fase="semis_sf"        onclick="cambiarTab(this,'semis_sf')">Semis</button>
+      <button class="tab"        data-fase="final_tab"       onclick="cambiarTab(this,'final_tab')">Final</button>
+      <button class="tab"        data-fase="tercer_tab"      onclick="cambiarTab(this,'tercer_tab')">3er Puesto</button>
+    </div>
+
+    <div id="partidos-container">
+      <div class="loading"><div class="spinner"></div>Cargando...</div>
+    </div>
+
+  </div>
+
+  <!-- BOTÓN GUARDAR -->
+  <div style="position:fixed; bottom:68px; left:0; right:0; padding:0 16px; z-index:40;">
+    <div class="max-w-app">
+      <button id="btn-guardar" onclick="guardarTodo()" class="btn-primary" style="box-shadow:0 -8px 32px rgba(0,0,0,0.6);">
+        Guardar predicciones
+      </button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <nav class="bottom-nav">
+    <a href="index.html"         class="nav-item"><span>🏠</span><span>Inicio</span></a>
+    <a href="predicciones.html"  class="nav-item active"><span>⚽</span><span>Mis picks</span></a>
+    <a href="resultados.html"    class="nav-item"><span>📊</span><span>Resultados</span></a>
+    <a href="clasificacion.html" class="nav-item"><span>🏆</span><span>Ranking</span></a>
+  </nav>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/flags.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/bracket.js"></script>
+  <script>
+    let usuarioActual = null;
+    let todosPartidos  = [];
+    let todosEquipos   = [];
+    let misPredicciones = {}; // { partido_id: { goles_local, goles_visitante } }
+    let faseActual = 'grupos';
+    let grupoActual = null;
+
+    // =====================================================
+    // INIT
+    // =====================================================
+    async function init() {
+      const userId   = localStorage.getItem('mundial_user_id');
+      const userName = localStorage.getItem('mundial_user_nombre');
+      if (!userId || !userName) { window.location.href = 'index.html'; return; }
+
+      try {
+        const part = await db.getParticipante(userName);
+        if (!part) { localStorage.clear(); window.location.href = 'index.html'; return; }
+        usuarioActual = part;
+        document.getElementById('header-nombre').textContent = part.nombre;
+      } catch(e) { window.location.href = 'index.html'; return; }
+
+      try {
+        const [partidos, predicciones, equipos, campeon] = await Promise.all([
+          db.getTodosPartidos(),
+          db.getPrediccionesPorParticipante(usuarioActual.id),
+          db.getEquipos(),
+          db.getCampeon(usuarioActual.id)
+        ]);
+
+        todosPartidos = partidos;
+        todosEquipos  = equipos;
+
+        predicciones.forEach(p => { misPredicciones[p.partido_id] = p; });
+
+        // Cargar equipos en el select de campeón
+        const sel = document.getElementById('campeon-select');
+        const grupos = [...new Set(equipos.map(e => e.grupo))].sort();
+        grupos.forEach(g => {
+          const og = document.createElement('optgroup');
+          og.label = `Grupo ${g}`;
+          equipos.filter(e => e.grupo === g).forEach(eq => {
+            const opt = document.createElement('option');
+            opt.value = eq.nombre;
+            opt.textContent = getFlag(eq.nombre) + ' ' + eq.nombre;
+            og.appendChild(opt);
+          });
+          sel.appendChild(og);
+        });
+        if (campeon) {
+          bloquearCampeon(campeon.equipo);
+        }
+
+        // Asegurar que existen los partidos eliminatorios en DB
+        await asegurarPartidosEliminatorios();
+
+        renderizarPartidos('grupos');
+
+      } catch(e) {
+        console.error(e);
+        document.getElementById('partidos-container').innerHTML =
+          `<div class="empty-state"><p style="color:var(--red);">Error: ${e.message}</p></div>`;
+      }
+    }
+
+    // =====================================================
+    // ASEGURAR PARTIDOS ELIMINATORIOS EN DB
+    // Si no existen, crearlos con "Por definir"
+    // =====================================================
+    async function asegurarPartidosEliminatorios() {
+      const existenOctavos = todosPartidos.some(p => p.fase === 'octavos');
+      if (existenOctavos) return;
+
+      const nuevos = [];
+      bracket.BRACKET_R32.forEach(m => {
+        nuevos.push({ fase:'octavos', grupo:m.label, equipo_local:'Por definir', equipo_visitante:'Por definir', orden:m.orden, numero:m.id, jugado:false });
+      });
+      bracket.R16_ESTRUCTURA.forEach(m => {
+        nuevos.push({ fase:'cuartos', grupo:m.label, equipo_local:'Por definir', equipo_visitante:'Por definir', orden:m.orden, jugado:false });
+      });
+      bracket.QF_ESTRUCTURA.forEach(m => {
+        nuevos.push({ fase:'semis', grupo:m.label, equipo_local:'Por definir', equipo_visitante:'Por definir', orden:m.orden, jugado:false });
+      });
+      bracket.SF_ESTRUCTURA.forEach(m => {
+        nuevos.push({ fase:'tercer_puesto', grupo:m.label, equipo_local:'Por definir', equipo_visitante:'Por definir', orden:m.orden, jugado:false });
+      });
+      nuevos.push({ fase:'tercer_puesto', grupo:'3er Puesto', equipo_local:'Por definir', equipo_visitante:'Por definir', orden:490, jugado:false });
+      nuevos.push({ fase:'final', grupo:'Final', equipo_local:'Por definir', equipo_visitante:'Por definir', orden:500, jugado:false });
+
+      try {
+        await db.insertarPartidos(nuevos);
+        todosPartidos = await db.getTodosPartidos();
+      } catch(e) {
+        // Si ya existen (conflict), recargar partidos
+        todosPartidos = await db.getTodosPartidos();
+      }
+    }
+
+    // =====================================================
+    // CALCULAR EQUIPOS SIMULADOS (cascada completa)
+    // Basado en las predicciones del usuario
+    // =====================================================
+    function calcularSlotMap() {
+      const slotMap = {};
+
+      // — Paso 1: simular fase de grupos con predicciones del usuario —
+      const gruposEquipos = {};
+      todosEquipos.forEach(e => {
+        if (!gruposEquipos[e.grupo]) gruposEquipos[e.grupo] = [];
+        gruposEquipos[e.grupo].push(e.nombre);
+      });
+
+      const clasificaciones = {};
+      for (const [grupo, eqs] of Object.entries(gruposEquipos)) {
+        const ps = todosPartidos
+          .filter(p => p.fase === 'grupos' && p.grupo === grupo)
+          .map(p => {
+            const pred = misPredicciones[p.id];
+            if (pred) return { ...p, jugado:true, goles_local:pred.goles_local, goles_visitante:pred.goles_visitante };
+            return p;
+          });
+
+        // Solo calcular clasificación si hay al menos un partido con predicción o resultado real
+        const tieneData = ps.some(p => p.jugado);
+        if (tieneData) {
+          clasificaciones[grupo] = bracket.calcularClasificacionGrupo(eqs, ps);
+        }
+      }
+      const mejoresTerceros = bracket.getMejoresTerceros(clasificaciones);
+
+      for (const [grupo, tabla] of Object.entries(clasificaciones)) {
+        if (tabla[0]) slotMap[`1${grupo}`] = tabla[0].nombre;
+        if (tabla[1]) slotMap[`2${grupo}`] = tabla[1].nombre;
+      }
+      mejoresTerceros.forEach((t, i) => { slotMap[`3rd-${i+1}`] = t.nombre; });
+
+      // — Paso 2: resolver R32 (16avos) —
+      bracket.BRACKET_R32.forEach(m => {
+        const local  = slotMap[m.home_slot] || m.home_slot;
+        const visita = slotMap[m.away_slot]  || m.away_slot;
+        slotMap[m.label + '_home'] = local;
+        slotMap[m.label + '_away'] = visita;
+
+        const dbMatch = todosPartidos.find(p => p.grupo === m.label);
+        if (!dbMatch) return;
+        const pred = misPredicciones[dbMatch.id];
+        if (pred) {
+          const gl = parseInt(pred.goles_local), gv = parseInt(pred.goles_visitante);
+          // En eliminación: si empate, avanza local (simplificación)
+          slotMap[m.label + '_win'] = (!isNaN(gv) && gv > gl) ? visita : local;
+        }
+      });
+
+      // — Paso 3: resolver R16 (8vos) —
+      bracket.R16_ESTRUCTURA.forEach(m => {
+        const local  = slotMap[m.from[0] + '_win'] || `[W ${m.from[0]}]`;
+        const visita = slotMap[m.from[1] + '_win'] || `[W ${m.from[1]}]`;
+        slotMap[m.label + '_home'] = local;
+        slotMap[m.label + '_away'] = visita;
+
+        const dbMatch = todosPartidos.find(p => p.grupo === m.label);
+        if (!dbMatch) return;
+        const pred = misPredicciones[dbMatch.id];
+        if (pred) {
+          const gl = parseInt(pred.goles_local), gv = parseInt(pred.goles_visitante);
+          slotMap[m.label + '_win'] = (!isNaN(gv) && gv > gl) ? visita : local;
+        }
+      });
+
+      // — Paso 4: resolver QF (4tos) —
+      bracket.QF_ESTRUCTURA.forEach(m => {
+        const local  = slotMap[m.from[0] + '_win'] || `[W ${m.from[0]}]`;
+        const visita = slotMap[m.from[1] + '_win'] || `[W ${m.from[1]}]`;
+        slotMap[m.label + '_home'] = local;
+        slotMap[m.label + '_away'] = visita;
+
+        const dbMatch = todosPartidos.find(p => p.grupo === m.label);
+        if (!dbMatch) return;
+        const pred = misPredicciones[dbMatch.id];
+        if (pred) {
+          const gl = parseInt(pred.goles_local), gv = parseInt(pred.goles_visitante);
+          slotMap[m.label + '_win']  = (!isNaN(gv) && gv > gl) ? visita : local;
+          slotMap[m.label + '_loss'] = (!isNaN(gv) && gv > gl) ? local : visita;
+        }
+      });
+
+      // — Paso 5: resolver SF (Semis) —
+      bracket.SF_ESTRUCTURA.forEach(m => {
+        const local  = slotMap[m.from[0] + '_win'] || `[W ${m.from[0]}]`;
+        const visita = slotMap[m.from[1] + '_win'] || `[W ${m.from[1]}]`;
+        slotMap[m.label + '_home'] = local;
+        slotMap[m.label + '_away'] = visita;
+
+        const dbMatch = todosPartidos.find(p => p.grupo === m.label && p.fase === 'tercer_puesto');
+        if (!dbMatch) return;
+        const pred = misPredicciones[dbMatch.id];
+        if (pred) {
+          const gl = parseInt(pred.goles_local), gv = parseInt(pred.goles_visitante);
+          slotMap[m.label + '_win']  = (!isNaN(gv) && gv > gl) ? visita : local;
+          slotMap[m.label + '_loss'] = (!isNaN(gv) && gv > gl) ? local : visita;
+        }
+      });
+
+      // 3er puesto y Final
+      slotMap['3er Puesto_home'] = slotMap['SF-1_loss'] || '[Perdedor SF-1]';
+      slotMap['3er Puesto_away'] = slotMap['SF-2_loss'] || '[Perdedor SF-2]';
+      slotMap['Final_home']      = slotMap['SF-1_win']  || '[Ganador SF-1]';
+      slotMap['Final_away']      = slotMap['SF-2_win']  || '[Ganador SF-2]';
+
+      return slotMap;
+    }
+
+    // =====================================================
+    // CAMBIAR TAB
+    // =====================================================
+    function cambiarTab(btn, fase) {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      faseActual = fase;
+      renderizarPartidos(fase);
+    }
+
+    // =====================================================
+    // RENDER PRINCIPAL
+    // =====================================================
+    function renderizarPartidos(fase) {
+      const container = document.getElementById('partidos-container');
+
+      if (fase === 'grupos') {
+        renderGrupos(container);
+      } else if (fase === 'semis_sf') {
+        renderSemisTab(container);
+      } else if (fase === 'tercer_tab') {
+        renderTercerPuestoTab(container);
+      } else if (fase === 'final_tab') {
+        renderFinalTab(container);
+      } else {
+        renderEliminatoria(container, fase);
+      }
+    }
+
+    // =====================================================
+    // GRUPOS
+    // =====================================================
+    function renderGrupos(container) {
+      const partidos = todosPartidos.filter(p => p.fase === 'grupos');
+      const grupos = [...new Set(partidos.map(p => p.grupo))].sort();
+
+      if (grupos.length === 0) {
+        container.innerHTML = `<div class="empty-state"><p>No hay partidos. Ve a Configurar.</p></div>`;
+        return;
+      }
+
+      const grupoInicial = (grupoActual && grupos.includes(grupoActual)) ? grupoActual : grupos[0];
+      let html = `<div class="tabs" id="subtabs-g" style="flex-wrap:wrap;">`;
+      grupos.forEach(g => {
+        html += `<button class="tab ${g===grupoInicial?'active':''}" onclick="cambiarSubgrupo(this,'${g}')">Grupo ${g}</button>`;
+      });
+      html += `</div><div id="contenido-grupo"></div>`;
+      container.innerHTML = html;
+      cambiarSubgrupoDirecto(grupoInicial);
+    }
+
+    function cambiarSubgrupo(btn, grupo) {
+      document.querySelectorAll('#subtabs-g .tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      grupoActual = grupo;
+      cambiarSubgrupoDirecto(grupo);
+    }
+
+    function cambiarSubgrupoDirecto(grupo) {
+      grupoActual = grupo;
+      const c = document.getElementById('contenido-grupo');
+      if (!c) return;
+      const partidos = todosPartidos.filter(p => p.fase === 'grupos' && p.grupo === grupo);
+      c.innerHTML = partidos.map(p => renderCardPartido(p, p.equipo_local, p.equipo_visitante)).join('');
+      // Rellenar predicciones guardadas
+      partidos.forEach(p => {
+        const pred = misPredicciones[p.id];
+        if (pred) {
+          const lEl = document.getElementById(`pl-${p.id}`);
+          const vEl = document.getElementById(`pv-${p.id}`);
+          if (lEl) lEl.value = pred.goles_local;
+          if (vEl) vEl.value = pred.goles_visitante;
+        }
+      });
+    }
+
+    // =====================================================
+    // FASES ELIMINATORIAS (16avos, 8vos, 4tos)
+    // =====================================================
+    function renderEliminatoria(container, fase) {
+      const slotMap = calcularSlotMap();
+
+      let estructura;
+      let titulos;
+
+      if (fase === 'octavos') {
+        estructura = bracket.BRACKET_R32.map(m => ({
+          label: m.label,
+          local: slotMap[m.label + '_home'] || m.home_slot,
+          visita: slotMap[m.label + '_away'] || m.away_slot,
+          r16: m.r16
+        }));
+        titulos = { izq: 'Lado Izquierdo', der: 'Lado Derecho' };
+      } else if (fase === 'cuartos') {
+        estructura = bracket.R16_ESTRUCTURA.map(m => ({
+          label: m.label,
+          local: slotMap[m.label + '_home'] || `[W ${m.from[0]}]`,
+          visita: slotMap[m.label + '_away'] || `[W ${m.from[1]}]`,
+        }));
+      } else if (fase === 'semis') {
+        estructura = bracket.QF_ESTRUCTURA.map(m => ({
+          label: m.label,
+          local: slotMap[m.label + '_home'] || `[W ${m.from[0]}]`,
+          visita: slotMap[m.label + '_away'] || `[W ${m.from[1]}]`,
+        }));
+      }
+
+      if (!estructura) { container.innerHTML = `<div class="empty-state"><p>Fase no disponible.</p></div>`; return; }
+
+      let html = `<p class="card-title" style="margin-top:8px;">Basado en tus predicciones de grupos</p>`;
+
+      estructura.forEach(m => {
+        const dbMatch = todosPartidos.find(p => p.grupo === m.label);
+        if (!dbMatch) {
+          html += `<div class="match-card" style="opacity:0.5;">
+            <p style="text-align:center; color:var(--text-muted); font-size:0.8rem;">${m.label} — Sin datos</p>
+          </div>`;
+          return;
+        }
+        html += `<div style="margin-bottom:2px;"><span style="font-size:0.65rem; color:var(--text-muted); letter-spacing:1px;">${m.label}</span></div>`;
+        html += renderCardPartido(dbMatch, m.local, m.visita);
+      });
+
+      container.innerHTML = html;
+
+      // Rellenar predicciones
+      estructura.forEach(m => {
+        const dbMatch = todosPartidos.find(p => p.grupo === m.label);
+        if (!dbMatch) return;
+        const pred = misPredicciones[dbMatch.id];
+        if (pred) {
+          const lEl = document.getElementById(`pl-${dbMatch.id}`);
+          const vEl = document.getElementById(`pv-${dbMatch.id}`);
+          if (lEl) lEl.value = pred.goles_local;
+          if (vEl) vEl.value = pred.goles_visitante;
+        }
+      });
+    }
+
+    // =====================================================
+    // SEMIS + TERCER PUESTO + FINAL
+    // =====================================================
+    function renderSemisTab(container) {
+      const slotMap = calcularSlotMap();
+      let html = `<p class="card-title" style="margin-top:8px;">Semifinales</p>`;
+      bracket.SF_ESTRUCTURA.forEach(m => {
+        const local  = slotMap[m.label + '_home'] || `[W ${m.from[0]}]`;
+        const visita = slotMap[m.label + '_away'] || `[W ${m.from[1]}]`;
+        const dbMatch = todosPartidos.find(p => p.grupo === m.label && p.fase === 'tercer_puesto');
+        if (!dbMatch) return;
+        html += `<div style="margin-bottom:2px;"><span style="font-size:0.65rem; color:var(--text-muted); letter-spacing:1px;">${m.label}</span></div>`;
+        html += renderCardPartido(dbMatch, local, visita);
+      });
+      container.innerHTML = html;
+      bracket.SF_ESTRUCTURA.map(m => todosPartidos.find(p => p.grupo === m.label && p.fase === 'tercer_puesto'))
+        .filter(Boolean).forEach(dbMatch => rellenarPred(dbMatch));
+    }
+
+    function renderTercerPuestoTab(container) {
+      const slotMap = calcularSlotMap();
+      let html = `<p class="card-title" style="margin-top:8px;">3er Puesto</p>`;
+      const db3 = todosPartidos.find(p => p.grupo === '3er Puesto');
+      if (db3) html += renderCardPartido(db3, slotMap['3er Puesto_home'] || 'Por definir', slotMap['3er Puesto_away'] || 'Por definir');
+      container.innerHTML = html;
+      if (db3) rellenarPred(db3);
+    }
+
+    function renderFinalTab(container) {
+      const slotMap = calcularSlotMap();
+      let html = `<p class="card-title" style="margin-top:8px;">Gran Final</p>`;
+      const dbFinal = todosPartidos.find(p => p.grupo === 'Final');
+      if (dbFinal) html += renderCardPartido(dbFinal, slotMap['Final_home'] || 'Por definir', slotMap['Final_away'] || 'Por definir');
+      container.innerHTML = html;
+      if (dbFinal) rellenarPred(dbFinal);
+    }
+
+    function rellenarPred(dbMatch) {
+      const pred = misPredicciones[dbMatch.id];
+      if (pred) {
+        const lEl = document.getElementById(`pl-${dbMatch.id}`);
+        const vEl = document.getElementById(`pv-${dbMatch.id}`);
+        if (lEl) lEl.value = pred.goles_local;
+        if (vEl) vEl.value = pred.goles_visitante;
+      }
+    }
+
+    // =====================================================
+    // CARD DE PARTIDO (genérica)
+    // =====================================================
+    function renderCardPartido(partido, localNombre, visitaNombre) {
+      const pred = misPredicciones[partido.id];
+      const jugado = partido.jugado;
+      const fL = getFlag(localNombre);
+      const fV = getFlag(visitaNombre);
+      const esTBD = localNombre === 'Por definir' || localNombre.startsWith('[');
+
+      const inputsHtml = pred
+        ? `<div style="display:flex; gap:4px; flex-shrink:0;">
+             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:800; font-size:1.2rem; color:var(--gold-light);">${pred.goles_local}</div>
+             <div style="display:flex; align-items:center; padding:0 2px; color:var(--text-dim);">–</div>
+             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:800; font-size:1.2rem; color:var(--gold-light);">${pred.goles_visitante}</div>
+           </div>`
+        : `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+             <input type="number" id="pl-${partido.id}" class="score-input" min="0" max="20" placeholder="–" ${esTBD?'disabled':''} oninput="marcarMod(${partido.id})" onwheel="this.blur()">
+             <span class="score-sep">–</span>
+             <input type="number" id="pv-${partido.id}" class="score-input" min="0" max="20" placeholder="–" ${esTBD?'disabled':''} oninput="marcarMod(${partido.id})" onwheel="this.blur()">
+           </div>`;
+
+      const puntosHtml = jugado && pred ? getPuntosHtml(pred, partido) : '';
+      const savedHtml = pred
+        ? `<span class="saved-indicator" id="saved-${partido.id}">Guardado</span>`
+        : `<span class="saved-indicator hidden" id="saved-${partido.id}">Guardado</span>`;
+
+      const resultadoReal = jugado
+        ? `<div style="margin-top:8px; font-size:0.75rem; color:var(--text-muted); text-align:center;">
+             Resultado real: <strong style="color:var(--text);">${partido.goles_local} – ${partido.goles_visitante}</strong>
+           </div>`
+        : '';
+
+      return `
+        <div class="match-card animate-in ${jugado ? 'jugado' : ''}">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:6px; min-height:18px; gap:6px;">
+            ${savedHtml}${puntosHtml}
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="flex:1; text-align:right; font-weight:600; font-size:0.85rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fL} ${escH(localNombre)}</div>
+            ${inputsHtml}
+            <div style="flex:1; font-weight:600; font-size:0.85rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fV} ${escH(visitaNombre)}</div>
+          </div>
+          ${resultadoReal}
+        </div>`;
+    }
+
+    function getPuntosHtml(pred, partido) {
+      const pts  = scoring.calcularPuntos(pred, partido);
+      const tipo = scoring.getTipoAcierto(pred, partido);
+      const cls  = tipo === 'exacto' ? 'pts-exacto' : tipo === 'parcial' ? 'pts-parcial' : tipo === 'correcto' ? 'pts-correcto' : tipo === 'marcador' ? 'pts-marcador' : 'pts-fallo';
+      const txt  = tipo === 'exacto' ? 'Exacto' : tipo === 'parcial' ? 'Resultado+' : tipo === 'correcto' ? 'Resultado' : tipo === 'marcador' ? 'Marcador' : 'Fallo';
+      return `<span class="pts-badge ${cls}">${txt} · ${pts>0?'+'+pts:'0'} pts</span>`;
+    }
+
+    function marcarMod(partidoId) {
+      const el = document.getElementById(`saved-${partidoId}`);
+      if (el) el.classList.add('hidden');
+    }
+
+    // =====================================================
+    // GUARDAR CAMPEÓN
+    // =====================================================
+    async function guardarCampeon() {
+      const equipo = document.getElementById('campeon-select').value;
+      if (!equipo) { mostrarToast('Elige un equipo'); return; }
+      try {
+        await db.guardarCampeon(usuarioActual.id, equipo);
+        bloquearCampeon(equipo);
+        mostrarToast('Campeón guardado');
+      } catch(e) { mostrarToast('Error al guardar'); }
+    }
+
+    function bloquearCampeon(equipo) {
+      document.getElementById('campeon-editable').classList.add('hidden');
+      const bloqueado = document.getElementById('campeon-bloqueado');
+      bloqueado.classList.remove('hidden');
+      bloqueado.style.display = 'flex';
+      document.getElementById('campeon-nombre-bloqueado').textContent = getFlag(equipo) + ' ' + equipo;
+    }
+
+    // =====================================================
+    // GUARDAR TODO
+    // =====================================================
+    async function guardarTodo() {
+      if (!usuarioActual) return;
+      const btn = document.getElementById('btn-guardar');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      const fases = ['grupos','octavos','cuartos','semis','tercer_puesto','final'];
+      const promesas = [];
+      let contador = 0;
+
+      for (const fase of fases) {
+        const partidos = todosPartidos.filter(p => p.fase === fase && !p.jugado && !misPredicciones[p.id]);
+        for (const partido of partidos) {
+          const lEl = document.getElementById(`pl-${partido.id}`);
+          const vEl = document.getElementById(`pv-${partido.id}`);
+          if (!lEl || !vEl || lEl.value === '' || vEl.value === '') continue;
+          const gl = parseInt(lEl.value), gv = parseInt(vEl.value);
+          if (isNaN(gl) || isNaN(gv)) continue;
+          contador++;
+          promesas.push(
+            db.guardarPrediccion(usuarioActual.id, partido.id, gl, gv).then(() => {
+              misPredicciones[partido.id] = { goles_local: gl, goles_visitante: gv };
+              const el = document.getElementById(`saved-${partido.id}`);
+              if (el) el.classList.remove('hidden');
+            })
+          );
+        }
+      }
+
+      if (promesas.length === 0) {
+        mostrarToast('Sin predicciones nuevas');
+        btn.disabled = false; btn.textContent = 'Guardar predicciones'; return;
+      }
+
+      try {
+        await Promise.all(promesas);
+        mostrarToast(`${contador} predicciones guardadas`);
+        // Re-renderizar para actualizar la simulación
+        renderizarPartidos(faseActual);
+      } catch(e) { mostrarToast('Error al guardar'); }
+
+      btn.disabled = false;
+      btn.textContent = 'Guardar predicciones';
+    }
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
+    function getFlag(n) { return (window.flags && window.flags[n]) ? window.flags[n] : '🏳️'; }
+    function escH(str) { if (!str) return 'Por definir'; const d = document.createElement('div'); d.appendChild(document.createTextNode(str)); return d.innerHTML; }
+    function mostrarToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

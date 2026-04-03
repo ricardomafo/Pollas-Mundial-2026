@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurar - Mundial 2026</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body style="min-height:100vh; padding-bottom: 80px;">
+
+  <!-- HEADER -->
+  <header class="app-header" style="text-align: left; padding: 14px 16px;">
+    <div style="max-width: 720px; margin: 0 auto; display:flex; align-items:center; gap:12px;">
+      <a href="index.html" style="color: var(--text-muted); text-decoration: none; display:flex; align-items:center; flex-shrink:0;">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 style="font-size: 1.4rem; margin: 0; background: linear-gradient(135deg, var(--gold), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">⚙️ CONFIGURAR</h1>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0;">Grupos, equipos y partidos</p>
+      </div>
+    </div>
+  </header>
+
+  <div style="max-width: 720px; margin: 0 auto; padding: 16px;">
+
+    <!-- AVISO IMPORTANTE -->
+    <div class="card" style="background: rgba(255,214,0,0.05); border-color: rgba(255,214,0,0.2); display:flex; gap:12px; align-items:flex-start; margin-bottom: 20px;">
+      <span style="font-size:1.5rem; flex-shrink:0;">⚠️</span>
+      <div>
+        <p style="font-weight:700; color:var(--gold); font-size:0.9rem; margin:0 0 4px;">Solo para el administrador</p>
+        <p style="color:var(--text-muted); font-size:0.8rem; margin:0;">Esta página es para configurar el torneo. Al generar partidos, se borran los de fase de grupos anteriores.</p>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: GRUPOS -->
+    <div style="margin-bottom: 32px;">
+      <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0 0 4px; color: var(--text);">1. Equipos por grupo</h2>
+      <p style="color:var(--text-muted); font-size:0.85rem; margin:0 0 16px;">Entra los 4 equipos de cada grupo (A hasta L). Hay 48 equipos en total.</p>
+
+      <!-- Estado carga equipos -->
+      <div id="loading-grupos" style="display:flex; align-items:center; gap:10px; padding: 16px 0;">
+        <div class="spinner" style="width:20px; height:20px; border-width:2px; flex-shrink:0;"></div>
+        <span style="color:var(--text-muted); font-size:0.9rem;">Cargando equipos...</span>
+      </div>
+
+      <div id="grupos-grid" class="hidden" style="display: none; grid-template-columns: 1fr; gap: 10px;"></div>
+
+      <button id="btn-guardar-grupos" onclick="guardarGrupos()" class="btn-primary hidden" style="margin-top: 16px; display:none;">
+        ✅ Guardar equipos y generar partidos de grupos
+      </button>
+      <p id="grupos-status" class="hidden" style="font-size:0.85rem; margin-top:10px; text-align:center; font-weight:600;"></p>
+    </div>
+
+    <!-- DIVIDER -->
+    <div style="border-top: 1px solid var(--border); margin-bottom: 32px;"></div>
+
+    <!-- SECCIÓN 2: ELIMINATORIAS -->
+    <div style="margin-bottom: 32px;">
+      <h2 style="font-size: 1.1rem; font-weight: 800; margin: 0 0 4px; color: var(--text);">2. Fases eliminatorias</h2>
+      <p style="color:var(--text-muted); font-size:0.85rem; margin:0 0 16px;">
+        Una vez terminada la fase de grupos, entra los equipos que pasan a cada ronda.
+      </p>
+
+      <!-- Tabs de eliminatorias -->
+      <div class="tabs" style="margin-bottom: 16px;">
+        <button class="tab active" onclick="cambiarTabElim(this, 'octavos')">Octavos</button>
+        <button class="tab" onclick="cambiarTabElim(this, 'cuartos')">Cuartos</button>
+        <button class="tab" onclick="cambiarTabElim(this, 'semis')">Semis</button>
+        <button class="tab" onclick="cambiarTabElim(this, 'tercer_puesto')">3er puesto</button>
+        <button class="tab" onclick="cambiarTabElim(this, 'final')">Final</button>
+      </div>
+
+      <div id="elim-octavos">
+        <div id="form-octavos"></div>
+        <button onclick="guardarEliminatoria('octavos')" class="btn-primary" style="margin-top: 12px;">
+          💾 Guardar octavos de final
+        </button>
+      </div>
+
+      <div id="elim-cuartos" class="hidden">
+        <div id="form-cuartos"></div>
+        <button onclick="guardarEliminatoria('cuartos')" class="btn-primary" style="margin-top: 12px;">
+          💾 Guardar cuartos de final
+        </button>
+      </div>
+
+      <div id="elim-semis" class="hidden">
+        <div id="form-semis"></div>
+        <button onclick="guardarEliminatoria('semis')" class="btn-primary" style="margin-top: 12px;">
+          💾 Guardar semifinales
+        </button>
+      </div>
+
+      <div id="elim-tercer_puesto" class="hidden">
+        <div id="form-tercer_puesto"></div>
+        <button onclick="guardarEliminatoria('tercer_puesto')" class="btn-primary" style="margin-top: 12px;">
+          💾 Guardar partido 3er puesto
+        </button>
+      </div>
+
+      <div id="elim-final" class="hidden">
+        <div id="form-final"></div>
+        <button onclick="guardarEliminatoria('final')" class="btn-primary" style="margin-top: 12px;">
+          💾 Guardar final
+        </button>
+      </div>
+
+      <p id="elim-status" class="hidden" style="font-size:0.85rem; margin-top:10px; text-align:center; font-weight:600;"></p>
+    </div>
+
+    <!-- SECCIÓN 3: PELIGRO -->
+    <div class="card" style="border-color: rgba(255,68,68,0.3); margin-bottom: 20px;">
+      <h3 style="color:var(--red); font-weight:700; margin:0 0 8px; display:flex; align-items:center; gap:8px;">
+        <span>🗑️</span> Zona de peligro
+      </h3>
+      <p style="color:var(--text-muted); font-size:0.85rem; margin:0 0 16px;">Estas acciones no se pueden deshacer.</p>
+      <button onclick="confirmarResetPartidos()" style="width:100%; padding:12px; background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.4); color:var(--red); font-weight:700; font-size:0.9rem; border-radius:10px; cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,68,68,0.2)'" onmouseout="this.style.background='rgba(255,68,68,0.1)'">
+        Borrar todos los partidos
+      </button>
+    </div>
+
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <span>🏠</span>
+      <span>Inicio</span>
+    </a>
+    <a href="predicciones.html" class="nav-item">
+      <span>⚽</span>
+      <span>Mis picks</span>
+    </a>
+    <a href="resultados.html" class="nav-item">
+      <span>📊</span>
+      <span>Resultados</span>
+    </a>
+    <a href="clasificacion.html" class="nav-item">
+      <span>🏆</span>
+      <span>Ranking</span>
+    </a>
+  </nav>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/flags.js"></script>
+  <script src="js/db.js"></script>
+  <script>
+    const GRUPOS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+
+    const CONFIG_FASES = {
+      octavos: { num: 16, label: 'Octavos de final' },
+      cuartos: { num: 8, label: 'Cuartos de final' },
+      semis: { num: 4, label: 'Semifinales' },
+      tercer_puesto: { num: 1, label: '3er y 4to puesto' },
+      final: { num: 1, label: 'Gran Final' }
+    };
+
+    let partidosExistentes = {};
+
+    async function init() {
+      await cargarEquiposEnFormulario();
+      generarFormulariosEliminatoria();
+      await cargarPartidosEliminatoria();
+    }
+
+    async function cargarEquiposEnFormulario() {
+      try {
+        const equipos = await db.getEquipos();
+
+        const porGrupo = {};
+        for (const eq of equipos) {
+          if (!porGrupo[eq.grupo]) porGrupo[eq.grupo] = [];
+          porGrupo[eq.grupo].push(eq.nombre);
+        }
+
+        document.getElementById('loading-grupos').style.display = 'none';
+        const grid = document.getElementById('grupos-grid');
+        grid.style.display = 'grid';
+        grid.classList.remove('hidden');
+
+        // Responsive: 2 columns on wider screens
+        grid.style.gridTemplateColumns = window.innerWidth >= 540 ? '1fr 1fr' : '1fr';
+
+        grid.innerHTML = GRUPOS.map(g => {
+          const equiposGrupo = porGrupo[g] || ['', '', '', ''];
+          return `
+            <div class="card" style="padding: 14px;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom: 12px;">
+                <div class="grupo-badge" style="margin-bottom:0;">${g}</div>
+                <span style="font-weight:700; font-size:0.9rem;">Grupo ${g}</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                ${[0,1,2,3].map(i => `
+                  <input
+                    type="text"
+                    class="input-field"
+                    id="equipo-${g}-${i}"
+                    placeholder="${window.getFlag('') || ''}Equipo ${i+1}"
+                    value="${escapeAttr(equiposGrupo[i] || '')}"
+                    maxlength="40"
+                    style="padding: 10px 12px; font-size:0.9rem;"
+                  />
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        const btn = document.getElementById('btn-guardar-grupos');
+        btn.style.display = 'block';
+        btn.classList.remove('hidden');
+
+      } catch (e) {
+        console.error(e);
+        document.getElementById('loading-grupos').innerHTML = `
+          <p style="color:var(--red); font-size:0.85rem;">Error al cargar equipos: ${e.message}</p>
+        `;
+      }
+    }
+
+    async function guardarGrupos() {
+      const btn = document.getElementById('btn-guardar-grupos');
+      const status = document.getElementById('grupos-status');
+
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+      status.classList.add('hidden');
+
+      try {
+        const equiposArray = [];
+        for (const grupo of GRUPOS) {
+          for (let i = 0; i < 4; i++) {
+            const input = document.getElementById(`equipo-${grupo}-${i}`);
+            const nombre = input ? input.value.trim() : '';
+            if (nombre) {
+              equiposArray.push({ nombre, grupo });
+            }
+          }
+        }
+
+        if (equiposArray.length < 4) {
+          throw new Error('Entra al menos un grupo completo (4 equipos)');
+        }
+
+        await db.guardarEquipos(equiposArray);
+        await db.generarPartidosGrupos();
+
+        status.textContent = `✅ ${equiposArray.length} equipos guardados y partidos de grupos generados`;
+        status.style.color = 'var(--green)';
+        status.classList.remove('hidden');
+        mostrarToast('✅ Equipos y partidos generados con éxito');
+
+      } catch (e) {
+        console.error(e);
+        status.textContent = `❌ Error: ${e.message}`;
+        status.style.color = 'var(--red)';
+        status.classList.remove('hidden');
+        mostrarToast('Error: ' + e.message);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '✅ Guardar equipos y generar partidos de grupos';
+    }
+
+    function generarFormulariosEliminatoria() {
+      for (const [fase, config] of Object.entries(CONFIG_FASES)) {
+        const container = document.getElementById(`form-${fase}`);
+        if (!container) continue;
+
+        let html = '';
+        for (let i = 0; i < config.num; i++) {
+          html += `
+            <div class="card" style="padding:12px; margin-bottom:8px;">
+              <p style="font-size:0.75rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px;">Partido ${i + 1}</p>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input
+                  type="text"
+                  class="input-field"
+                  id="${fase}-local-${i}"
+                  placeholder="Equipo local"
+                  maxlength="40"
+                  style="flex:1; padding:10px 12px; font-size:0.9rem;"
+                />
+                <span style="color:var(--text-muted); font-weight:700; flex-shrink:0;">vs</span>
+                <input
+                  type="text"
+                  class="input-field"
+                  id="${fase}-visitante-${i}"
+                  placeholder="Equipo visitante"
+                  maxlength="40"
+                  style="flex:1; padding:10px 12px; font-size:0.9rem;"
+                />
+              </div>
+            </div>
+          `;
+        }
+        container.innerHTML = html;
+      }
+    }
+
+    async function cargarPartidosEliminatoria() {
+      try {
+        const partidos = await db.getPartidos();
+
+        for (const partido of partidos) {
+          if (partido.fase === 'grupos') continue;
+          if (!partidosExistentes[partido.fase]) {
+            partidosExistentes[partido.fase] = [];
+          }
+          partidosExistentes[partido.fase].push(partido);
+        }
+
+        for (const [fase, partidos] of Object.entries(partidosExistentes)) {
+          partidos.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+          partidos.forEach((p, i) => {
+            const localInput = document.getElementById(`${fase}-local-${i}`);
+            const visitanteInput = document.getElementById(`${fase}-visitante-${i}`);
+            if (localInput) localInput.value = p.equipo_local !== 'Por definir' ? p.equipo_local : '';
+            if (visitanteInput) visitanteInput.value = p.equipo_visitante !== 'Por definir' ? p.equipo_visitante : '';
+          });
+        }
+
+      } catch (e) {
+        console.error('Error cargando partidos eliminatoria:', e);
+      }
+    }
+
+    async function guardarEliminatoria(fase) {
+      const config = CONFIG_FASES[fase];
+      if (!config) return;
+
+      const status = document.getElementById('elim-status');
+      status.classList.add('hidden');
+
+      const matches = [];
+      for (let i = 0; i < config.num; i++) {
+        const local = document.getElementById(`${fase}-local-${i}`)?.value.trim() || '';
+        const visitante = document.getElementById(`${fase}-visitante-${i}`)?.value.trim() || '';
+        if (local || visitante) {
+          matches.push({ equipo_local: local || 'Por definir', equipo_visitante: visitante || 'Por definir' });
+        }
+      }
+
+      if (matches.length === 0) {
+        mostrarToast('Entra al menos un partido');
+        return;
+      }
+
+      const btn = document.querySelector(`#elim-${fase} > button`);
+      if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+      try {
+        await db.guardarPartidosEliminatoria(fase, matches);
+
+        status.textContent = `✅ ${matches.length} partido(s) de ${config.label} guardados`;
+        status.style.color = 'var(--green)';
+        status.classList.remove('hidden');
+        mostrarToast(`✅ ${config.label} guardados`);
+
+      } catch (e) {
+        console.error(e);
+        status.textContent = `❌ Error: ${e.message}`;
+        status.style.color = 'var(--red)';
+        status.classList.remove('hidden');
+        mostrarToast('Error: ' + e.message);
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = `💾 Guardar ${config.label.toLowerCase()}`;
+      }
+    }
+
+    function cambiarTabElim(btn, fase) {
+      document.querySelectorAll('[id^="elim-"]').forEach(el => {
+        if (el.id !== 'elim-status') el.classList.add('hidden');
+      });
+      document.getElementById(`elim-${fase}`).classList.remove('hidden');
+
+      document.querySelectorAll('.tabs .tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    async function confirmarResetPartidos() {
+      if (!confirm('¿Seguro que quieres borrar TODOS los partidos? Las predicciones también se borrarán.')) return;
+      if (!confirm('Esta acción es irreversible. ¿Confirmas?')) return;
+
+      try {
+        await supabaseClient.from('predicciones').delete().neq('id', 0);
+        await supabaseClient.from('partidos').delete().neq('id', 0);
+        mostrarToast('Todos los partidos borrados');
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (e) {
+        mostrarToast('Error: ' + e.message);
+      }
+    }
+
+    function mostrarToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    function escapeAttr(str) {
+      return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

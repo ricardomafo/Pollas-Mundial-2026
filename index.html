@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>⚽ Mundial 2026 - Familia</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body style="min-height:100vh; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <h1>⚽ MUNDIAL 2026</h1>
+    <p>Quiniela familiar · USA · CAN · MEX</p>
+  </header>
+
+  <!-- MAIN -->
+  <main class="max-w-app" style="padding: 20px 16px 0;">
+
+    <!-- Estado de carga -->
+    <div id="loading" style="text-align:center; padding: 60px 20px;">
+      <div class="spinner" style="margin: 0 auto 12px;"></div>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Cargando...</p>
+    </div>
+
+    <!-- SECCIÓN: No registrado -->
+    <div id="registro-section" class="hidden animate-in">
+
+      <div class="card" style="margin-bottom: 16px;">
+        <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 4px;">¡Bienvenido a la quiniela!</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 20px;">Entra tu nombre para unirte a la quiniela familiar</p>
+
+        <label style="display:block; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Tu nombre</label>
+        <input
+          type="text"
+          id="nombre-input"
+          class="input-field"
+          placeholder="Ej: María, Juan, Abuela..."
+          maxlength="50"
+          autocomplete="off"
+          style="margin-bottom: 12px;"
+        />
+        <button id="btn-unirse" class="btn-primary" onclick="registrarse()">
+          Unirme a la quiniela 🎯
+        </button>
+        <p id="registro-error" class="hidden" style="color: var(--red); font-size: 0.85rem; margin-top: 10px;"></p>
+      </div>
+
+      <!-- Participantes actuales -->
+      <div class="card">
+        <p class="section-title">👥 Participantes</p>
+        <div id="lista-participantes-registro">
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Cargando participantes...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: Ya registrado -->
+    <div id="bienvenida-section" class="hidden animate-in">
+
+      <!-- Saludo hero -->
+      <div class="card" style="background: linear-gradient(135deg, #0a2010, #0d3318); border-color: rgba(0,200,83,0.3); margin-bottom: 16px; display: flex; align-items: center; gap: 14px;">
+        <div id="avatar-grande" class="avatar" style="width: 56px; height: 56px; font-size: 1.5rem; flex-shrink: 0;"></div>
+        <div>
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 2px;">¡Hola de nuevo!</p>
+          <h2 id="nombre-bienvenida" style="font-size: 1.5rem; font-weight: 900; margin: 0; color: var(--text);"></h2>
+          <p style="color: var(--green); font-size: 0.75rem; margin: 2px 0 0;">Tus predicciones te esperan ⚽</p>
+        </div>
+      </div>
+
+      <!-- Accesos rápidos -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+        <a href="predicciones.html" class="card" style="text-align: center; text-decoration: none; transition: border-color 0.2s; padding: 14px 8px;">
+          <div style="font-size: 1.6rem; margin-bottom: 6px;">⚽</div>
+          <div style="font-weight: 700; font-size: 0.8rem; color: var(--text);">Predicciones</div>
+        </a>
+        <a href="clasificacion.html" class="card" style="text-align: center; text-decoration: none; transition: border-color 0.2s; padding: 14px 8px;">
+          <div style="font-size: 1.6rem; margin-bottom: 6px;">🏆</div>
+          <div style="font-weight: 700; font-size: 0.8rem; color: var(--text);">Ranking</div>
+        </a>
+        <a href="resultados.html" class="card" style="text-align: center; text-decoration: none; transition: border-color 0.2s; padding: 14px 8px;">
+          <div style="font-size: 1.6rem; margin-bottom: 6px;">📊</div>
+          <div style="font-weight: 700; font-size: 0.8rem; color: var(--text);">Resultados</div>
+        </a>
+      </div>
+
+      <!-- Partidos del día -->
+      <div class="card" style="margin-bottom: 16px;">
+        <p class="section-title" id="partidos-hoy-titulo">Próximos partidos</p>
+        <div id="partidos-hoy"><div class="loading" style="padding:16px 0;"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- Cambiar usuario -->
+      <button
+        onclick="cambiarUsuario()"
+        style="width: 100%; padding: 12px; background: none; border: none; color: var(--text-muted); font-size: 0.85rem; cursor: pointer; transition: color 0.2s;"
+        onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'"
+      >
+        ¿No eres tú? Cambiar usuario
+      </button>
+    </div>
+
+  </main>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item active">
+      <span>🏠</span>
+      <span>Inicio</span>
+    </a>
+    <a href="predicciones.html" class="nav-item">
+      <span>⚽</span>
+      <span>Mis picks</span>
+    </a>
+    <a href="resultados.html" class="nav-item">
+      <span>📊</span>
+      <span>Resultados</span>
+    </a>
+    <a href="clasificacion.html" class="nav-item">
+      <span>🏆</span>
+      <span>Ranking</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/flags.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/bracket.js"></script>
+  <script>
+    let usuarioActual = null;
+
+    async function init() {
+      const userId = localStorage.getItem('mundial_user_id');
+      const userName = localStorage.getItem('mundial_user_nombre');
+
+      document.getElementById('loading').classList.add('hidden');
+
+      if (userId && userName) {
+        try {
+          const part = await db.getParticipante(userName);
+          if (part) {
+            usuarioActual = part;
+            mostrarBienvenida(part);
+          } else {
+            localStorage.removeItem('mundial_user_id');
+            localStorage.removeItem('mundial_user_nombre');
+            mostrarRegistro();
+          }
+        } catch (e) {
+          console.error(e);
+          mostrarRegistro();
+        }
+      } else {
+        mostrarRegistro();
+      }
+    }
+
+    function mostrarRegistro() {
+      document.getElementById('registro-section').classList.remove('hidden');
+      cargarParticipantesRegistro();
+    }
+
+    function mostrarBienvenida(participante) {
+      document.getElementById('bienvenida-section').classList.remove('hidden');
+      document.getElementById('nombre-bienvenida').textContent = participante.nombre;
+      document.getElementById('avatar-grande').textContent = participante.nombre.charAt(0).toUpperCase();
+      cargarPartidosHoy(participante.id);
+    }
+
+    async function cargarPartidosHoy(usuarioId) {
+      const container = document.getElementById('partidos-hoy');
+      const titulo = document.getElementById('partidos-hoy-titulo');
+      try {
+        const [partidos, predicciones, participantes] = await Promise.all([
+          db.getTodosPartidos(),
+          db.getPrediccionesPorParticipante(usuarioId),
+          db.getTodosParticipantes()
+        ]);
+
+        const misPreds = {};
+        predicciones.forEach(p => { misPreds[p.partido_id] = p; });
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        // Buscar partidos de hoy primero, luego los próximos sin jugar
+        const porFecha = (a, b) => {
+          const fa = a.fecha ? new Date(a.fecha + 'T' + (a.hora || '12:00:00')) : new Date('2099-01-01');
+          const fb = b.fecha ? new Date(b.fecha + 'T' + (b.hora || '12:00:00')) : new Date('2099-01-01');
+          return fa - fb || (a.orden || 0) - (b.orden || 0);
+        };
+
+        const grupos = partidos.filter(p => p.fase === 'grupos').sort(porFecha);
+
+        const hoyPartidos = grupos.filter(p => {
+          if (!p.fecha) return false;
+          const f = new Date(p.fecha + 'T12:00:00');
+          f.setHours(0, 0, 0, 0);
+          return f.getTime() === hoy.getTime();
+        });
+
+        let mostrar = hoyPartidos;
+        let labelTitulo = 'Partidos de hoy';
+
+        if (mostrar.length === 0) {
+          // Próximos sin jugar ordenados por fecha
+          mostrar = grupos.filter(p => !p.jugado).slice(0, 5);
+          labelTitulo = 'Próximos partidos';
+        }
+
+        if (mostrar.length === 0) {
+          // Últimos jugados, los más recientes primero
+          mostrar = grupos.filter(p => p.jugado).reverse().slice(0, 5);
+          labelTitulo = 'Últimos resultados';
+        }
+
+        titulo.textContent = labelTitulo;
+
+        if (mostrar.length === 0) {
+          container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:12px 0;">El Mundial empieza el 11 de junio de 2026</p>`;
+          return;
+        }
+
+        container.innerHTML = mostrar.map(p => {
+          const pred = misPreds[p.id];
+          const fL = getFlag(p.equipo_local);
+          const fV = getFlag(p.equipo_visitante);
+          const jugado = p.jugado;
+
+          const scoreBox = (val, ganador) => `
+            <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+              background:var(--surface3);border-radius:6px;font-weight:800;font-size:1rem;
+              ${ganador ? 'border:1px solid var(--gold);color:var(--gold-light);' : 'color:var(--text);'}">
+              ${val}
+            </div>`;
+
+          const resultadoHtml = jugado
+            ? `<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;">
+                ${scoreBox(p.goles_local, p.goles_local > p.goles_visitante)}
+                <span style="color:var(--text-dim);font-size:0.8rem;padding:0 1px;">–</span>
+                ${scoreBox(p.goles_visitante, p.goles_visitante > p.goles_local)}
+               </div>`
+            : `<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;">
+                <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;color:var(--text-dim);font-weight:300;">–</div>
+                <span style="color:var(--text-dim);font-size:0.8rem;padding:0 1px;">–</span>
+                <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;color:var(--text-dim);font-weight:300;">–</div>
+               </div>`;
+
+          const predHtml = pred
+            ? `<div style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.72rem;color:var(--text-muted);">
+                Tu pick: <strong style="color:var(--gold-light);">${pred.goles_local} – ${pred.goles_visitante}</strong>
+                ${jugado ? `<span class="pts-badge ${(t=>t==='exacto'?'pts-exacto':t==='parcial'?'pts-parcial':t==='correcto'?'pts-correcto':t==='marcador'?'pts-marcador':'pts-fallo')(scoring.getTipoAcierto(pred,p))}">${scoring.calcularPuntos(pred,p)>0?'+'+scoring.calcularPuntos(pred,p):'0'} pts</span>` : ''}
+               </div>`
+            : `<div style="margin-top:6px;text-align:center;font-size:0.72rem;color:var(--text-muted);">Sin predicción</div>`;
+
+          const fechaLabel = p.fecha
+            ? new Date(p.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' })
+            : '';
+          const horaLabel = p.hora ? p.hora.slice(0,5) : '';
+
+          return `
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);" class="animate-in">
+              ${fechaLabel ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:5px;text-transform:capitalize;">${fechaLabel}${horaLabel ? ' · ' + horaLabel : ''} · Grupo ${p.grupo}</div>` : ''}
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="flex:1;text-align:right;font-size:0.82rem;font-weight:600;">${fL} ${escapeHtml(p.equipo_local)}</div>
+                ${resultadoHtml}
+                <div style="flex:1;font-size:0.82rem;font-weight:600;">${fV} ${escapeHtml(p.equipo_visitante)}</div>
+              </div>
+              ${predHtml}
+            </div>`;
+        }).join('') + `<div style="text-align:right;margin-top:8px;">
+          <a href="resultados.html" style="font-size:0.75rem;color:var(--text-muted);text-decoration:none;">Ver todos →</a>
+        </div>`;
+
+      } catch(e) {
+        container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Error al cargar partidos</p>`;
+      }
+    }
+
+    async function cargarParticipantesRegistro() {
+      try {
+        const participantes = await db.getTodosParticipantes();
+        const container = document.getElementById('lista-participantes-registro');
+        if (participantes.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Sé el primero en unirte 🎉</p>';
+          return;
+        }
+        container.innerHTML = participantes.map(p => `
+          <div style="display:flex; align-items:center; gap:12px; padding: 10px 0; border-bottom: 1px solid var(--border);">
+            <div class="avatar" style="width:32px; height:32px; font-size:0.85rem;">${p.nombre.charAt(0).toUpperCase()}</div>
+            <span style="font-weight:600; color:var(--text);">${escapeHtml(p.nombre)}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        document.getElementById('lista-participantes-registro').innerHTML =
+          '<p style="color:var(--red); font-size:0.85rem;">Error al cargar participantes</p>';
+      }
+    }
+
+    async function cargarParticipantes() {
+      try {
+        const participantes = await db.getTodosParticipantes();
+        const container = document.getElementById('lista-participantes');
+        if (participantes.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Aún no hay nadie más</p>';
+          return;
+        }
+        container.innerHTML = participantes.map((p, i) => `
+          <div class="animate-in" style="display:flex; align-items:center; gap:12px; padding: 10px 0; border-bottom: 1px solid rgba(30,58,82,0.5); animation-delay:${i * 0.05}s;">
+            <div class="avatar" style="width:36px; height:36px;">${p.nombre.charAt(0).toUpperCase()}</div>
+            <span style="font-weight:600; color:var(--text); flex:1;">${escapeHtml(p.nombre)}</span>
+            ${p.nombre === (usuarioActual && usuarioActual.nombre) ? '<span style="font-size:0.75rem; background:var(--gold); color:#000; padding:2px 10px; border-radius:20px; font-weight:800;">Tú</span>' : ''}
+          </div>
+        `).join('');
+      } catch (e) {
+        document.getElementById('lista-participantes').innerHTML =
+          '<p style="color:var(--red); font-size:0.85rem;">Error al cargar</p>';
+      }
+    }
+
+    async function registrarse() {
+      const input = document.getElementById('nombre-input');
+      const nombre = input.value.trim();
+      const errorEl = document.getElementById('registro-error');
+      const btn = document.getElementById('btn-unirse');
+
+      errorEl.classList.add('hidden');
+
+      if (!nombre || nombre.length < 2) {
+        errorEl.textContent = 'Por favor entra un nombre de al menos 2 caracteres';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Uniéndome...';
+
+      try {
+        const participante = await db.registrar(nombre);
+        localStorage.setItem('mundial_user_id', participante.id);
+        localStorage.setItem('mundial_user_nombre', participante.nombre);
+        window.location.href = 'predicciones.html';
+      } catch (e) {
+        console.error(e);
+        errorEl.textContent = 'Error al registrarse. Comprueba tu conexión.';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Unirme a la quiniela 🎯';
+      }
+    }
+
+    function cambiarUsuario() {
+      if (confirm('¿Seguro que quieres cambiar de usuario?')) {
+        localStorage.removeItem('mundial_user_id');
+        localStorage.removeItem('mundial_user_nombre');
+        window.location.reload();
+      }
+    }
+
+    function mostrarToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function getFlag(n) { return (window.flags && window.flags[n]) ? window.flags[n] : ''; }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('nombre-input');
+      if (input) {
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') registrarse();
+        });
+      }
+      init();
+    });
+  </script>
+</body>
+</html>

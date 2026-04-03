@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Resultados - Mundial 2026</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body style="min-height:100vh; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));">
+
+  <header class="app-header" style="text-align:left; padding: 14px 20px;">
+    <div class="max-w-app">
+      <h1 style="font-size:1.6rem;">RESULTADOS</h1>
+      <p>Cualquiera puede meter los marcadores</p>
+    </div>
+  </header>
+
+  <div class="max-w-app" style="padding: 16px;">
+
+    <!-- TABS PRINCIPALES -->
+    <div class="tabs" id="tabs-fases">
+      <button class="tab active" data-fase="grupos"        onclick="cambiarFase(this,'grupos')">⚽ Grupos</button>
+      <button class="tab"        data-fase="octavos"       onclick="cambiarFase(this,'octavos')">16avos</button>
+      <button class="tab"        data-fase="cuartos"       onclick="cambiarFase(this,'cuartos')">8vos</button>
+      <button class="tab"        data-fase="semis"         onclick="cambiarFase(this,'semis')">4tos</button>
+      <button class="tab"        data-fase="semis_sf"      onclick="cambiarFase(this,'semis_sf')">Semis</button>
+      <button class="tab"        data-fase="final"         onclick="cambiarFase(this,'final')">Final</button>
+      <button class="tab"        data-fase="tercer_puesto" onclick="cambiarFase(this,'tercer_puesto')">3er Puesto</button>
+    </div>
+
+    <!-- BARRA DE SINCRONIZACIÓN -->
+    <div id="sync-bar" class="hidden" style="display:flex; align-items:center; justify-content:space-between; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:12px;">
+      <span id="sync-status" style="font-size:0.78rem; color:var(--text-muted);">Sin sincronizar</span>
+      <button onclick="sincronizarResultados(true)" class="btn-surface btn-sm" style="font-size:0.75rem; padding:6px 12px;">Sincronizar ahora</button>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      Cargando partidos...
+    </div>
+
+    <!-- CONTENIDO -->
+    <div id="contenido" class="hidden"></div>
+
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="index.html"         class="nav-item"><span>🏠</span><span>Inicio</span></a>
+    <a href="predicciones.html"  class="nav-item"><span>⚽</span><span>Mis picks</span></a>
+    <a href="resultados.html"    class="nav-item active"><span>📊</span><span>Resultados</span></a>
+    <a href="clasificacion.html" class="nav-item"><span>🏆</span><span>Ranking</span></a>
+  </nav>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/flags.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/bracket.js"></script>
+  <script>
+    let todosPartidos = [];
+    let todasPredicciones = [];
+    let todosEquipos = [];
+    let faseActual = 'grupos';
+
+    async function init() {
+      try {
+        [todosPartidos, todasPredicciones, todosEquipos] = await Promise.all([
+          db.getTodosPartidos(),
+          db.getTodasPredicciones(),
+          db.getEquipos()
+        ]);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('contenido').classList.remove('hidden');
+        renderFase('grupos');
+
+        // Activar sincronización automática si hay API key
+        if (FOOTBALL_DATA_API_KEY) {
+          document.getElementById('sync-bar').classList.remove('hidden');
+          document.getElementById('sync-bar').style.display = 'flex';
+          sincronizarResultados();
+          syncInterval = setInterval(() => sincronizarResultados(), 5 * 60 * 1000); // cada 5 min
+        }
+      } catch(e) {
+        document.getElementById('loading').innerHTML =
+          `<p style="color:var(--red);">Error: ${e.message}</p>`;
+      }
+    }
+
+    function cambiarFase(btn, fase) {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      faseActual = fase;
+      renderFase(fase);
+    }
+
+    // =====================================================
+    // RENDER PRINCIPAL POR FASE
+    // =====================================================
+    function renderFase(fase) {
+      const c = document.getElementById('contenido');
+      if (fase === 'grupos') {
+        renderGrupos(c);
+      } else if (fase === 'semis_sf') {
+        // Semis = partidos de tercer_puesto cuyo grupo empieza por "SF"
+        renderEliminatoriaFiltrada(c, 'tercer_puesto', p => p.grupo && p.grupo.startsWith('SF'), 'Semifinales');
+      } else if (fase === 'tercer_puesto') {
+        // 3er Puesto = partidos de tercer_puesto que NO son semis
+        renderEliminatoriaFiltrada(c, 'tercer_puesto', p => !p.grupo || !p.grupo.startsWith('SF'), '3er Puesto');
+      } else {
+        renderEliminatoria(c, fase);
+      }
+    }
+
+    // =====================================================
+    // FASE DE GRUPOS — con clasificación en tiempo real
+    // =====================================================
+    function renderGrupos(container) {
+      const partidos = todosPartidos.filter(p => p.fase === 'grupos');
+      const grupos = [...new Set(partidos.map(p => p.grupo))].sort();
+
+      if (grupos.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">⚽</div><p>No hay partidos de grupos.<br>Ve a ⚙️ Configurar para crearlos.</p></div>`;
+        return;
+      }
+
+      // Sub-tabs de grupos
+      let html = `<div class="tabs" id="subtabs-grupos" style="flex-wrap:wrap;">`;
+      grupos.forEach((g, i) => {
+        html += `<button class="tab ${i===0?'active':''}" onclick="cambiarSubgrupo(this,'${g}')">Grupo ${g}</button>`;
+      });
+      html += `</div><div id="contenido-grupo"></div>`;
+
+      // Banner si todos los grupos completados
+      const todoJugado = partidos.length > 0 && partidos.every(p => p.jugado);
+      if (todoJugado) {
+        html += `
+          <div class="bracket-banner" id="banner-bracket">
+            <h3>🏆 Fase de grupos completada</h3>
+            <p>Ya pueden generarse los 16avos de final</p>
+            <button class="btn-gold btn-sm" onclick="generarBracket()" style="width:auto; padding: 10px 24px;">
+              Generar 16avos de final
+            </button>
+          </div>`;
+      }
+
+      container.innerHTML = html;
+      cambiarSubgrupoDirecto(grupos[0]);
+    }
+
+    function cambiarSubgrupo(btn, grupo) {
+      document.querySelectorAll('#subtabs-grupos .tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      cambiarSubgrupoDirecto(grupo);
+    }
+
+    function cambiarSubgrupoDirecto(grupo) {
+      const c = document.getElementById('contenido-grupo');
+      if (!c) return;
+
+      const partidos = todosPartidos.filter(p => p.fase === 'grupos' && p.grupo === grupo);
+      const equiposGrupo = todosEquipos.filter(e => e.grupo === grupo).map(e => e.nombre);
+      const clasificacion = bracket.calcularClasificacionGrupo(equiposGrupo, partidos);
+
+      let html = '';
+
+      // Tabla de clasificación
+      html += `
+        <div class="card" style="padding:16px; margin-bottom:12px;">
+          <div class="card-title">Clasificación Grupo ${grupo}</div>
+          <table class="standings-table">
+            <thead>
+              <tr>
+                <th style="text-align:left;">Equipo</th>
+                <th>PJ</th><th>Pts</th><th>DG</th><th>GF</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${clasificacion.map((e, i) => {
+                const dotClass = i < 2 ? 'dot-green' : i === 2 ? 'dot-blue' : 'dot-grey';
+                const rowClass = i < 2 ? `q${i+1}` : i === 2 ? 'q3' : '';
+                return `<tr class="${rowClass}">
+                  <td><span class="qual-dot ${dotClass}"></span>${getFlag(e.nombre)} ${escH(e.nombre)}</td>
+                  <td>${e.pj}</td><td style="font-weight:700;">${e.pts}</td>
+                  <td style="color:${e.dg>=0?'var(--green)':'var(--red)'};">${e.dg>0?'+':''}${e.dg}</td>
+                  <td>${e.gf}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          <div style="display:flex; gap:12px; margin-top:10px; font-size:0.7rem; color:var(--text-muted);">
+            <span><span class="qual-dot dot-green"></span>Clasificado</span>
+            <span><span class="qual-dot dot-blue"></span>Posible 3°</span>
+          </div>
+        </div>`;
+
+      // Partidos del grupo
+      html += `<div class="card-title">Partidos</div>`;
+      partidos.forEach(p => {
+        html += p.jugado ? renderCardJugado(p) : renderCardPorJugar(p);
+      });
+
+      c.innerHTML = html;
+    }
+
+    // =====================================================
+    // FASES ELIMINATORIAS
+    // =====================================================
+    function renderEliminatoria(container, fase) {
+      const partidos = todosPartidos.filter(p => p.fase === fase).sort((a,b) => (a.orden||0)-(b.orden||0));
+
+      const nombFases = { octavos:'16avos de Final', cuartos:'Octavos de Final', semis:'Semifinales', tercer_puesto:'3er Puesto', final:'Final' };
+
+      if (partidos.length === 0) {
+        const gruposOk = todosPartidos.filter(p=>p.fase==='grupos').every(p=>p.jugado) && todosPartidos.filter(p=>p.fase==='grupos').length > 0;
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🏆</div>
+            <p style="margin-bottom:16px;">${gruposOk ? 'Ve a la pestaña Grupos y genera los 16avos' : 'Completa la fase de grupos primero'}</p>
+            ${gruposOk && fase==='octavos' ? `<button class="btn-gold btn-sm" onclick="generarBracket()" style="width:auto;padding:10px 24px;">Generar 16avos</button>` : ''}
+          </div>`;
+        return;
+      }
+
+      let html = `<p class="card-title">${nombFases[fase] || fase}</p>`;
+      partidos.forEach(p => {
+        const label = p.grupo ? `<span style="font-size:0.68rem;color:var(--text-muted);">${p.grupo}</span>` : '';
+        html += `<div style="margin-bottom:4px;">${label}</div>`;
+        html += p.jugado ? renderCardJugado(p) : renderCardPorJugar(p);
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderEliminatoriaFiltrada(container, fase, filtro, titulo) {
+      const partidos = todosPartidos.filter(p => p.fase === fase && filtro(p)).sort((a,b) => (a.orden||0)-(b.orden||0));
+
+      if (partidos.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🏆</div><p>Completa las rondas anteriores primero</p></div>`;
+        return;
+      }
+
+      let html = `<p class="card-title">${titulo}</p>`;
+      partidos.forEach(p => {
+        const label = p.grupo ? `<span style="font-size:0.68rem;color:var(--text-muted);">${p.grupo}</span>` : '';
+        html += `<div style="margin-bottom:4px;">${label}</div>`;
+        html += p.jugado ? renderCardJugado(p) : renderCardPorJugar(p);
+      });
+
+      container.innerHTML = html;
+    }
+
+    // =====================================================
+    // CARDS
+    // =====================================================
+    function formatFechaHora(p) {
+      if (!p.fecha) return '';
+      const fecha = new Date(p.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
+      const hora  = p.hora ? ' · ' + p.hora.slice(0,5) : '';
+      return fecha + hora;
+    }
+
+    function renderCardPorJugar(p) {
+      const fL = getFlag(p.equipo_local);
+      const fV = getFlag(p.equipo_visitante);
+      const esTBD = p.equipo_local.startsWith('[') || p.equipo_visitante.startsWith('[') || p.equipo_local === 'Por definir';
+      const fechaHora = formatFechaHora(p);
+      return `
+        <div class="match-card animate-in" id="card-${p.id}">
+          ${fechaHora ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:6px;text-transform:capitalize;">${fechaHora}</div>` : ''}
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="flex:1; text-align:right; font-weight:600; font-size:0.88rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fL} ${escH(p.equipo_local)}</div>
+            <div style="display:flex; gap:4px; flex-shrink:0;">
+              <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:8px;font-weight:300;font-size:1.2rem;color:var(--text-dim);">–</div>
+              <div style="display:flex;align-items:center;padding:0 2px;color:var(--text-dim);">–</div>
+              <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:8px;font-weight:300;font-size:1.2rem;color:var(--text-dim);">–</div>
+            </div>
+            <div style="flex:1; font-weight:600; font-size:0.88rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fV} ${escH(p.equipo_visitante)}</div>
+          </div>
+          <p style="text-align:center;font-size:0.72rem;color:var(--text-muted);margin-top:8px;">Resultado pendiente</p>
+        </div>`;
+    }
+
+    function renderCardJugado(p) {
+      const gl = parseInt(p.goles_local);
+      const gv = parseInt(p.goles_visitante);
+      const ganadorLocal = gl > gv;
+      const ganadorVis = gv > gl;
+      const fL = getFlag(p.equipo_local);
+      const fV = getFlag(p.equipo_visitante);
+      const predsPartido = todasPredicciones.filter(pr => pr.partido_id === p.id);
+
+      const tablaPreds = predsPartido.length > 0 ? `
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+          <div class="card-title" style="margin-bottom:6px;">Predicciones</div>
+          ${predsPartido.map(pred => {
+            const pts = scoring.calcularPuntos(pred, p);
+            const tipo = scoring.getTipoAcierto(pred, p);
+            const nombre = pred.participantes ? pred.participantes.nombre : '?';
+            const cls = tipo === 'exacto' ? 'pts-exacto' : tipo === 'parcial' ? 'pts-parcial' : tipo === 'correcto' ? 'pts-correcto' : tipo === 'marcador' ? 'pts-marcador' : 'pts-fallo';
+            const icon = tipo === 'exacto' ? '🎯' : tipo === 'parcial' ? '✓+' : tipo === 'correcto' ? '✓' : tipo === 'marcador' ? '~' : '✗';
+            return `
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; background:var(--surface3); margin-bottom:4px;">
+                <span style="font-size:0.82rem; font-weight:600;">${escH(nombre)}</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-weight:700; font-size:0.85rem;">${pred.goles_local} – ${pred.goles_visitante}</span>
+                  <span class="pts-badge ${cls}">${icon} ${pts>0?'+'+pts:'0'} pts</span>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>` : '';
+
+      return `
+        <div class="match-card jugado animate-in">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:0.68rem; color:var(--text-muted); text-transform:capitalize;">${formatFechaHora(p)}</span>
+            <button onclick="editarResultado(${p.id})" style="font-size:0.68rem; color:var(--text-muted); background:none; border:none; cursor:pointer;">Editar</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="flex:1; text-align:right; font-weight:700; font-size:0.88rem; ${ganadorLocal?'color:var(--gold-light);':''}">${fL} ${escH(p.equipo_local)}</div>
+            <div style="display:flex; gap:4px; flex-shrink:0;">
+              <div style="width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:900; font-size:1.2rem; ${ganadorLocal?'border:1px solid var(--gold);':''}">${gl}</div>
+              <div style="display:flex; align-items:center; padding:0 2px; color:var(--text-dim); font-weight:300;">–</div>
+              <div style="width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:900; font-size:1.2rem; ${ganadorVis?'border:1px solid var(--gold);':''}">${gv}</div>
+            </div>
+            <div style="flex:1; font-weight:700; font-size:0.88rem; ${ganadorVis?'color:var(--gold-light);':''}">${fV} ${escH(p.equipo_visitante)}</div>
+          </div>
+          ${tablaPreds}
+        </div>`;
+    }
+
+    // =====================================================
+    // GUARDAR RESULTADO
+    // =====================================================
+    async function guardarResultado(partidoId) {
+      const lInput = document.getElementById(`res-local-${partidoId}`);
+      const vInput = document.getElementById(`res-vis-${partidoId}`);
+
+      if (!lInput || lInput.value === '' || !vInput || vInput.value === '') {
+        mostrarToast('Entra los dos marcadores'); return;
+      }
+      const gl = parseInt(lInput.value);
+      const gv = parseInt(vInput.value);
+      if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) {
+        mostrarToast('Marcadores inválidos'); return;
+      }
+
+      const btn = document.querySelector(`#card-${partidoId} button`);
+      if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+      try {
+        const actualizado = await db.guardarResultado(partidoId, gl, gv);
+
+        // Actualizar array local
+        const idx = todosPartidos.findIndex(p => p.id === partidoId);
+        if (idx !== -1) todosPartidos[idx] = actualizado;
+
+        // Propagar ganador si es fase eliminatoria
+        if (actualizado.fase !== 'grupos') {
+          await bracket.propagarGanador(actualizado);
+          // Recargar partidos para reflejar propagación
+          todosPartidos = await db.getTodosPartidos();
+        }
+
+        mostrarToast(`✅ ${gl} – ${gv} guardado`);
+        renderFase(faseActual);
+
+      } catch(e) {
+        console.error(e);
+        mostrarToast('Error al guardar');
+        if (btn) { btn.disabled = false; btn.textContent = '✅ Guardar resultado'; }
+      }
+    }
+
+    async function editarResultado(partidoId) {
+      const partido = todosPartidos.find(p => p.id === partidoId);
+      if (!partido) return;
+      const gl = prompt(`${partido.equipo_local} - Goles:`, partido.goles_local);
+      if (gl === null) return;
+      const gv = prompt(`${partido.equipo_visitante} - Goles:`, partido.goles_visitante);
+      if (gv === null) return;
+      if (isNaN(parseInt(gl)) || isNaN(parseInt(gv))) { mostrarToast('Números inválidos'); return; }
+      try {
+        const actualizado = await db.guardarResultado(partidoId, parseInt(gl), parseInt(gv));
+        const idx = todosPartidos.findIndex(p => p.id === partidoId);
+        if (idx !== -1) todosPartidos[idx] = actualizado;
+        mostrarToast('✅ Resultado actualizado');
+        renderFase(faseActual);
+      } catch(e) { mostrarToast('Error al actualizar'); }
+    }
+
+    // =====================================================
+    // GENERAR BRACKET
+    // =====================================================
+    async function generarBracket() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = 'Generando...';
+      try {
+        await bracket.generarEliminatorias();
+        todosPartidos = await db.getTodosPartidos();
+        mostrarToast('✅ ¡16avos generados! Ve a la pestaña 16avos');
+        renderFase('grupos');
+        // Cambiar tab a octavos
+        setTimeout(() => {
+          const tabOctavos = document.querySelector('[data-fase="octavos"]');
+          if (tabOctavos) tabOctavos.click();
+        }, 1500);
+      } catch(e) {
+        console.error(e);
+        mostrarToast('Error al generar el bracket');
+        btn.disabled = false;
+        btn.textContent = 'Generar 16avos de final';
+      }
+    }
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
+    function getFlag(nombre) { return (window.flags && window.flags[nombre]) ? window.flags[nombre] : '🏳️'; }
+    function escH(str) { if (!str) return 'Por definir'; const d = document.createElement('div'); d.appendChild(document.createTextNode(str)); return d.innerHTML; }
+    function formatFecha(f) { if (!f) return ''; const d = new Date(f+'T12:00:00'); return d.toLocaleDateString('es-ES',{day:'numeric',month:'short'}); }
+    function mostrarToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // =====================================================
+    // NOMBRES DE EQUIPOS: API → nuestra app
+    // =====================================================
+    const TEAM_MAP = {
+      'Mexico': 'México', 'South Africa': 'Sudáfrica', 'Korea Republic': 'Corea del Sur',
+      'Czech Republic': 'Chequia', 'Bosnia and Herzegovina': 'Bosnia', 'Switzerland': 'Suiza',
+      'Brazil': 'Brasil', 'Morocco': 'Marruecos', 'Haiti': 'Haití', 'Scotland': 'Escocia',
+      'USA': 'EEUU', 'United States': 'EEUU', 'Paraguay': 'Paraguay', 'Australia': 'Australia',
+      'Türkiye': 'Turquía', 'Turkey': 'Turquía', 'Germany': 'Alemania', 'Curaçao': 'Curazao',
+      "Côte d'Ivoire": 'Costa de Marfil', "Ivory Coast": 'Costa de Marfil', 'Ecuador': 'Ecuador',
+      'Netherlands': 'Países Bajos', 'Japan': 'Japón', 'Sweden': 'Suecia', 'Tunisia': 'Túnez',
+      'Belgium': 'Bélgica', 'Egypt': 'Egipto', 'Iran': 'Irán', 'New Zealand': 'Nueva Zelanda',
+      'Spain': 'España', 'Cape Verde': 'Cabo Verde', 'Saudi Arabia': 'Arabia Saudita',
+      'Uruguay': 'Uruguay', 'France': 'Francia', 'Senegal': 'Senegal', 'Iraq': 'Irak',
+      'Norway': 'Noruega', 'Argentina': 'Argentina', 'Algeria': 'Argelia', 'Austria': 'Austria',
+      'Jordan': 'Jordania', 'Portugal': 'Portugal', 'DR Congo': 'RDCongo', 'Congo DR': 'RDCongo',
+      'Uzbekistan': 'Uzbekistán', 'Colombia': 'Colombia', 'England': 'Inglaterra',
+      'Croatia': 'Croacia', 'Ghana': 'Ghana', 'Panama': 'Panamá', 'Canada': 'Canadá',
+      'Qatar': 'Qatar',
+    };
+
+    // =====================================================
+    // SINCRONIZACIÓN CON FOOTBALL-DATA.ORG
+    // =====================================================
+    let syncInterval = null;
+
+    async function sincronizarResultados(forzado = false) {
+      if (!FOOTBALL_DATA_API_KEY) return;
+
+      const statusEl = document.getElementById('sync-status');
+      if (statusEl) statusEl.textContent = 'Sincronizando...';
+
+      try {
+        // Llamar a la Edge Function de Supabase (evita el problema de CORS)
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/clever-service`, {
+          method: 'POST'
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        const { actualizados, sinEncontrar } = data;
+        const ahora = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        let msg = `Actualizado ${ahora}`;
+        if (actualizados > 0) msg += ` · ${actualizados} resultados nuevos`;
+        if (sinEncontrar && sinEncontrar.length > 0) msg += ` · Sin mapear: ${sinEncontrar.join(', ')}`;
+        if (statusEl) statusEl.textContent = msg;
+
+        if (actualizados > 0) {
+          todosPartidos = await db.getTodosPartidos();
+          renderFase(faseActual);
+        }
+
+      } catch(e) {
+        console.error('Sync error:', e);
+        if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+        if (forzado) mostrarToast('Error: ' + e.message.slice(0, 80));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
