@@ -12,8 +12,12 @@
   <!-- HEADER -->
   <header class="app-header" style="text-align: left; padding: 14px 16px;">
     <div class="max-w-app">
-      <h1 style="font-size: 1.4rem; margin: 0; background: linear-gradient(135deg, var(--gold), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🏆 CLASIFICACIÓN</h1>
-      <p style="color: var(--text-muted); font-size: 0.75rem; margin: 4px 0 0;">Puntuación en tiempo real</p>
+      <h1 style="font-size: 1.4rem; margin: 0; background: linear-gradient(135deg, var(--gold), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🏆 RESULTADOS</h1>
+      <p id="grupo-header" style="color: var(--text-muted); font-size: 0.75rem; margin: 4px 0 0;">Puntuación en tiempo real</p>
+      <script>
+        const _g = localStorage.getItem('mundial_user_grupo');
+        if (_g) document.getElementById('grupo-header').textContent = '📍 ' + _g;
+      </script>
     </div>
   </header>
 
@@ -104,10 +108,11 @@
     ];
 
     async function init() {
+      const grupo = localStorage.getItem('mundial_user_grupo');
       try {
         const [clasificacion, evolucion] = await Promise.all([
-          db.calcularClasificacion(),
-          db.calcularEvolucion()
+          db.calcularClasificacion(grupo),
+          db.calcularEvolucion(grupo)
         ]);
 
         document.getElementById('loading').classList.add('hidden');

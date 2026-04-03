@@ -40,6 +40,18 @@
           autocomplete="off"
           style="margin-bottom: 12px;"
         />
+        <label style="display:block; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; margin-top: 4px;">Código de grupo</label>
+        <input
+          type="text"
+          id="codigo-input"
+          class="input-field"
+          placeholder="Ej: FAMILIA"
+          maxlength="30"
+          autocomplete="off"
+          style="margin-bottom: 4px; text-transform: uppercase; letter-spacing: 2px;"
+          oninput="this.value = this.value.toUpperCase()"
+        />
+        <p id="grupo-nombre" style="font-size:0.8rem; color:var(--green); min-height:18px; margin-bottom:12px;"></p>
         <button id="btn-unirse" class="btn-primary" onclick="registrarse()">
           Unirme a la polla 🎯
         </button>
@@ -135,21 +147,34 @@
   <script>
     let usuarioActual = null;
 
+    // Mostrar nombre de grupo al escribir el código
+    document.addEventListener('DOMContentLoaded', () => {
+      const codigoInput = document.getElementById('codigo-input');
+      if (codigoInput) {
+        codigoInput.addEventListener('input', () => {
+          const nombre = GRUPOS[codigoInput.value.trim().toUpperCase()];
+          document.getElementById('grupo-nombre').textContent = nombre ? '✓ ' + nombre : '';
+        });
+      }
+    });
+
     async function init() {
-      const userId = localStorage.getItem('mundial_user_id');
+      const userId   = localStorage.getItem('mundial_user_id');
       const userName = localStorage.getItem('mundial_user_nombre');
+      const userGrupo = localStorage.getItem('mundial_user_grupo');
 
       document.getElementById('loading').classList.add('hidden');
 
       if (userId && userName) {
         try {
-          const part = await db.getParticipante(userName);
+          const part = await db.getParticipante(userName, userGrupo);
           if (part) {
             usuarioActual = part;
             mostrarBienvenida(part);
           } else {
             localStorage.removeItem('mundial_user_id');
             localStorage.removeItem('mundial_user_nombre');
+            localStorage.removeItem('mundial_user_grupo');
             mostrarRegistro();
           }
         } catch (e) {
@@ -325,10 +350,12 @@
     }
 
     async function registrarse() {
-      const input = document.getElementById('nombre-input');
-      const nombre = input.value.trim();
-      const errorEl = document.getElementById('registro-error');
-      const btn = document.getElementById('btn-unirse');
+      const input    = document.getElementById('nombre-input');
+      const codInput = document.getElementById('codigo-input');
+      const nombre   = input.value.trim();
+      const codigo   = codInput.value.trim().toUpperCase();
+      const errorEl  = document.getElementById('registro-error');
+      const btn      = document.getElementById('btn-unirse');
 
       errorEl.classList.add('hidden');
 
@@ -338,13 +365,21 @@
         return;
       }
 
+      const grupoNombre = GRUPOS[codigo];
+      if (!grupoNombre) {
+        errorEl.textContent = 'Código de grupo incorrecto. Pídelo al organizador.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
       btn.disabled = true;
       btn.textContent = 'Uniéndome...';
 
       try {
-        const participante = await db.registrar(nombre);
+        const participante = await db.registrar(nombre, grupoNombre);
         localStorage.setItem('mundial_user_id', participante.id);
         localStorage.setItem('mundial_user_nombre', participante.nombre);
+        localStorage.setItem('mundial_user_grupo', participante.grupo);
         window.location.href = 'predicciones.html';
       } catch (e) {
         console.error(e);

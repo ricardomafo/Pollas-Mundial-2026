@@ -15,13 +15,14 @@ window.db = {
    * Registra un participante (upsert por nombre)
    * @returns {Object} participante
    */
-  async registrar(nombre) {
+  async registrar(nombre, grupo) {
     const nombreLimpio = nombre.trim();
-    // Comprobar si ya existe
+    // Comprobar si ya existe en ese grupo
     const { data: existe, error: errExiste } = await supabaseClient
       .from('participantes')
       .select('*')
       .ilike('nombre', nombreLimpio)
+      .eq('grupo', grupo)
       .maybeSingle();
 
     if (errExiste) throw errExiste;
@@ -29,7 +30,7 @@ window.db = {
 
     const { data, error } = await supabaseClient
       .from('participantes')
-      .insert({ nombre: nombreLimpio })
+      .insert({ nombre: nombreLimpio, grupo })
       .select()
       .single();
 
@@ -40,26 +41,25 @@ window.db = {
   /**
    * Obtiene un participante por nombre (insensible a mayúsculas)
    */
-  async getParticipante(nombre) {
-    const { data, error } = await supabaseClient
+  async getParticipante(nombre, grupo) {
+    let query = supabaseClient
       .from('participantes')
       .select('*')
-      .ilike('nombre', nombre.trim())
-      .maybeSingle();
-
+      .ilike('nombre', nombre.trim());
+    if (grupo) query = query.eq('grupo', grupo);
+    const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return data;
   },
 
   /**
-   * Obtiene todos los participantes ordenados por nombre
+   * Obtiene participantes, filtrado por grupo si se especifica
    */
-  async getTodosParticipantes() {
-    const { data, error } = await supabaseClient
-      .from('participantes')
-      .select('*')
-      .order('nombre');
-
+  async getTodosParticipantes(grupo) {
+    let query = supabaseClient.from('participantes').select('*');
+    if (grupo) query = query.eq('grupo', grupo);
+    query = query.order('nombre');
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   },
@@ -382,10 +382,10 @@ window.db = {
    * Calcula la clasificación completa
    * @returns {Array} participantes con puntos, ordenados
    */
-  async calcularClasificacion() {
+  async calcularClasificacion(grupo) {
     // Obtener todos los datos necesarios
     const [participantes, predicciones, campeones, partidos] = await Promise.all([
-      this.getTodosParticipantes(),
+      this.getTodosParticipantes(grupo),
       this.getTodasPredicciones(),
       this.getTodosCampeones(),
       this.getTodosPartidos()
@@ -514,9 +514,9 @@ window.db = {
    * Calcula la evolución de puntos día a día
    * @returns {Object} { fechas: [], series: [{ nombre, data: [] }] }
    */
-  async calcularEvolucion() {
+  async calcularEvolucion(grupo) {
     const [participantes, predicciones, partidos, campeones] = await Promise.all([
-      this.getTodosParticipantes(),
+      this.getTodosParticipantes(grupo),
       this.getTodasPredicciones(),
       this.getTodosPartidos(),
       this.getTodosCampeones()
