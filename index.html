@@ -58,13 +58,6 @@
         <p id="registro-error" class="hidden" style="color: var(--red); font-size: 0.85rem; margin-top: 10px;"></p>
       </div>
 
-      <!-- Participantes actuales -->
-      <div class="card">
-        <p class="section-title">👥 Participantes</p>
-        <div id="lista-participantes-registro">
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Cargando participantes...</p>
-        </div>
-      </div>
     </div>
 
     <!-- SECCIÓN: Ya registrado -->
@@ -118,7 +111,7 @@
   <div id="toast" class="toast"></div>
 
   <!-- BOTTOM NAV -->
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" id="bottom-nav" style="display:none;">
     <a href="index.html" class="nav-item active">
       <span>🏠</span>
       <span>Inicio</span>
@@ -188,12 +181,15 @@
 
     function mostrarRegistro() {
       document.getElementById('registro-section').classList.remove('hidden');
-      cargarParticipantesRegistro();
+      document.getElementById('bottom-nav').style.display = 'none';
+      document.body.style.paddingBottom = '20px';
     }
 
     function mostrarBienvenida(participante) {
       document.getElementById('registro-section').classList.add('hidden');
       document.getElementById('bienvenida-section').classList.remove('hidden');
+      document.getElementById('bottom-nav').style.display = 'flex';
+      document.body.style.paddingBottom = 'calc(80px + env(safe-area-inset-bottom, 0px))';
       document.getElementById('nombre-bienvenida').textContent = participante.nombre;
       document.getElementById('avatar-grande').textContent = participante.nombre.charAt(0).toUpperCase();
       cargarPartidosHoy(participante.id);
