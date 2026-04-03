@@ -154,6 +154,19 @@ window.db = {
   },
 
   /**
+   * Obtiene todas las predicciones de una lista de partidos, con nombre de participante
+   */
+  async getPrediccionesDePartidos(partidoIds) {
+    if (!partidoIds || partidoIds.length === 0) return [];
+    const { data, error } = await supabaseClient
+      .from('predicciones')
+      .select('partido_id, goles_local, goles_visitante, participantes(nombre, grupo)')
+      .in('partido_id', partidoIds);
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
    * Obtiene todas las predicciones con info de participante y partido
    */
   async getTodasPredicciones() {

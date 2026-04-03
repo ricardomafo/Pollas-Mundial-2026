@@ -198,14 +198,26 @@
       cargarPartidosHoy(participante.id);
     }
 
+    // Mapa global de predicciones de todos los participantes por partido
+    let todasPredsPartido = {};
+
+    function togglePredsPartido(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const abierto = el.style.display !== 'none';
+      el.style.display = abierto ? 'none' : 'block';
+      const btn = document.getElementById('btn_' + id);
+      if (btn) btn.textContent = abierto ? 'Ver predicciones del grupo ▾' : 'Ocultar ▴';
+    }
+
     async function cargarPartidosHoy(usuarioId) {
       const container = document.getElementById('partidos-hoy');
       const titulo = document.getElementById('partidos-hoy-titulo');
+      const userGrupo = localStorage.getItem('mundial_user_grupo');
       try {
-        const [partidos, predicciones, participantes] = await Promise.all([
+        const [partidos, predicciones] = await Promise.all([
           db.getTodosPartidos(),
           db.getPrediccionesPorParticipante(usuarioId),
-          db.getTodosParticipantes()
         ]);
 
         const misPreds = {};
@@ -214,7 +226,6 @@
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
 
-        // Buscar partidos de hoy primero, luego los próximos sin jugar
         const porFecha = (a, b) => {
           const fa = a.fecha ? new Date(a.fecha + 'T' + (a.hora || '12:00:00')) : new Date('2099-01-01');
           const fb = b.fecha ? new Date(b.fecha + 'T' + (b.hora || '12:00:00')) : new Date('2099-01-01');
@@ -234,13 +245,11 @@
         let labelTitulo = 'Partidos de hoy';
 
         if (mostrar.length === 0) {
-          // Próximos sin jugar ordenados por fecha
           mostrar = grupos.filter(p => !p.jugado).slice(0, 5);
           labelTitulo = 'Próximos partidos';
         }
 
         if (mostrar.length === 0) {
-          // Últimos jugados, los más recientes primero
           mostrar = grupos.filter(p => p.jugado).reverse().slice(0, 5);
           labelTitulo = 'Últimos resultados';
         }
@@ -250,6 +259,27 @@
         if (mostrar.length === 0) {
           container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:12px 0;">El Mundial empieza el 11 de junio de 2026</p>`;
           return;
+        }
+
+        // Cargar predicciones de todos los participantes del grupo para estos partidos
+        const ids = mostrar.map(p => p.id);
+        const todasPreds = await db.getPrediccionesDePartidos(ids);
+        todasPredsPartido = {};
+        for (const pr of todasPreds) {
+          if (!pr.participantes) continue;
+          if (userGrupo && pr.participantes.grupo !== userGrupo) continue;
+          if (!todasPredsPartido[pr.partido_id]) todasPredsPartido[pr.partido_id] = [];
+          todasPredsPartido[pr.partido_id].push({
+            nombre: pr.participantes.nombre,
+            gl: pr.goles_local,
+            gv: pr.goles_visitante,
+          });
+        }
+        // Ordenar por nombre
+        for (const id of ids) {
+          if (todasPredsPartido[id]) {
+            todasPredsPartido[id].sort((a, b) => a.nombre.localeCompare(b.nombre));
+          }
         }
 
         container.innerHTML = mostrar.map(p => {
@@ -289,6 +319,25 @@
             : '';
           const horaLabel = p.hora ? p.hora.slice(0,5) : '';
 
+          // Panel de predicciones del grupo
+          const grupoList = (todasPredsPartido[p.id] || []);
+          const grupoHtml = grupoList.length > 0
+            ? grupoList.map(pr => {
+                const esYo = pr.nombre.toLowerCase() === (usuarioActual && usuarioActual.nombre.toLowerCase());
+                const tipo = jugado ? scoring.getTipoAcierto({ goles_local: pr.gl, goles_visitante: pr.gv }, p) : null;
+                const badgeClass = tipo === 'exacto' ? 'pts-exacto' : tipo === 'parcial' ? 'pts-parcial' : tipo === 'correcto' ? 'pts-correcto' : tipo === 'marcador' ? 'pts-marcador' : tipo === 'fallo' ? 'pts-fallo' : '';
+                const pts = jugado ? scoring.calcularPuntos({ goles_local: pr.gl, goles_visitante: pr.gv }, p) : null;
+                return `
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+                    <span style="font-size:0.78rem;${esYo ? 'font-weight:700;color:var(--gold);' : 'color:var(--text);'}">${escapeHtml(pr.nombre)}${esYo ? ' (tú)' : ''}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                      <span style="font-size:0.82rem;font-weight:700;color:var(--text);">${pr.gl} – ${pr.gv}</span>
+                      ${jugado && badgeClass ? `<span class="pts-badge ${badgeClass}">${pts > 0 ? '+' + pts : '0'} pts</span>` : ''}
+                    </div>
+                  </div>`;
+              }).join('')
+            : `<p style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:8px 0;">Nadie ha predicho este partido aún</p>`;
+
           return `
             <div style="padding:10px 0;border-bottom:1px solid var(--border);" class="animate-in">
               ${fechaLabel ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:5px;text-transform:capitalize;">${fechaLabel}${horaLabel ? ' · ' + horaLabel : ''} · Grupo ${p.grupo}</div>` : ''}
@@ -298,12 +347,22 @@
                 <div style="flex:1;font-size:0.82rem;font-weight:600;">${fV} ${escapeHtml(p.equipo_visitante)}</div>
               </div>
               ${predHtml}
+              <div style="margin-top:6px;text-align:center;">
+                <button id="btn_pred_${p.id}" onclick="togglePredsPartido('pred_${p.id}')"
+                  style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;cursor:pointer;padding:2px 0;">
+                  Ver predicciones del grupo ▾
+                </button>
+              </div>
+              <div id="pred_${p.id}" style="display:none;margin-top:6px;background:var(--surface3);border-radius:8px;padding:6px 10px;">
+                ${grupoHtml}
+              </div>
             </div>`;
         }).join('') + `<div style="text-align:right;margin-top:8px;">
           <a href="resultados.html" style="font-size:0.75rem;color:var(--text-muted);text-decoration:none;">Ver todos →</a>
         </div>`;
 
       } catch(e) {
+        console.error(e);
         container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Error al cargar partidos</p>`;
       }
     }
