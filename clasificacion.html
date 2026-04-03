@@ -41,17 +41,68 @@
         <div id="tabla-cuerpo"></div>
       </div>
 
-      <!-- GRÁFICO EVOLUCIÓN -->
+      <!-- TABLA DE PUNTUACIÓN -->
       <div class="card" style="margin-bottom: 16px;">
-        <p style="font-weight: 700; font-size: 1rem; margin: 0 0 4px;">Evolución del marcador</p>
-        <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0 0 16px;">Puntos acumulados por fecha</p>
-        <div id="chart-container" style="position: relative; height: 280px;">
-          <canvas id="evolucionChart"></canvas>
+        <p class="card-title" style="margin-bottom:14px;">Sistema de puntuación</p>
+
+        <!-- Puntos por resultado -->
+        <p style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Por partido</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">🎯 Marcador exacto</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">4 pts</span>
         </div>
-        <div id="no-partidos" class="hidden" style="text-align:center; padding: 32px 0;">
-          <div style="font-size:2.5rem; margin-bottom:10px;">📅</div>
-          <p style="color:var(--text-muted); font-weight:600;">Aún no se han jugado partidos</p>
-          <p style="color:var(--text-muted); font-size:0.8rem; margin-top:4px;">La gráfica aparecerá aquí</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">✓+ Resultado + un marcador</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">3 pts</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">✓ Solo resultado</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">2 pts</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">~ Un marcador, resultado mal</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">1 pt</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">✗ Ninguna</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--gold); min-width:40px; text-align:right;">0 pts</span>
+        </div>
+
+        <div style="height:1px; background:var(--border); margin:14px 0;"></div>
+
+        <!-- Bonus por avance -->
+        <p style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Bonus por acertar el equipo que avanza</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">16avos de final</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--green); min-width:50px; text-align:right;">+2 pts</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">Octavos de final</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--green); min-width:50px; text-align:right;">+3 pts</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">Cuartos de final</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--green); min-width:50px; text-align:right;">+4 pts</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">Semifinales</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--green); min-width:50px; text-align:right;">+5 pts</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">3er y 4to puesto</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--green); min-width:50px; text-align:right;">+6 pts</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; background:var(--surface3); margin-bottom:6px;">
+          <span style="font-size:0.85rem; color:var(--text);">Campeón y subcampeón</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--green); min-width:50px; text-align:right;">+7 pts</span>
+        </div>
+
+        <div style="height:1px; background:var(--border); margin:14px 0;"></div>
+
+        <!-- Campeón -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-radius:10px; background:linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.04)); border:1px solid rgba(201,168,76,0.3);">
+          <span style="font-size:0.9rem; font-weight:700;">🏆 Acertar el campeón</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.3rem; color:var(--gold);">+10 pts</span>
         </div>
       </div>
 
