@@ -24,9 +24,9 @@
     </div>
 
     <!-- SECCIÓN: No registrado -->
-    <div id="registro-section" class="hidden animate-in">
+    <div id="registro-section" class="hidden animate-in" style="display:flex; flex-direction:column; justify-content:center;">
 
-      <div class="card" style="margin-bottom: 16px;">
+      <div class="card" style="margin-bottom: 0; flex:1; display:flex; flex-direction:column; justify-content:center;">
         <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 4px;">¡Bienvenido a la polla!</h2>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 20px;">Entra tu nombre y código para unirte o para volver a entrar a tu cuenta.</p>
 
@@ -182,7 +182,10 @@
     function mostrarRegistro() {
       document.getElementById('registro-section').classList.remove('hidden');
       document.getElementById('bottom-nav').style.display = 'none';
-      document.body.style.paddingBottom = '20px';
+      document.body.style.paddingBottom = '0';
+      document.body.style.minHeight = '100dvh';
+      document.getElementById('registro-section').style.minHeight =
+        'calc(100dvh - 80px)';
     }
 
     function mostrarBienvenida(participante) {
