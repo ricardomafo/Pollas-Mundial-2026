@@ -301,14 +301,18 @@
 
         titulo.textContent = labelTitulo;
 
+        // Verificar si el usuario ha predicho TODOS los partidos de grupos
+        const misPredsGrupos = grupos.filter(p => misPreds[p.id]).length;
+        const todosPredichos = misPredsGrupos >= grupos.length && grupos.length > 0;
+
         if (mostrar.length === 0) {
           container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:12px 0;">El Mundial empieza el 11 de junio de 2026</p>`;
           return;
         }
 
-        // Cargar predicciones de todos los participantes del grupo para estos partidos
+        // Cargar predicciones del grupo solo si el usuario ya completó las suyas
         const ids = mostrar.map(p => p.id);
-        const todasPreds = await db.getPrediccionesDePartidos(ids);
+        const todasPreds = todosPredichos ? await db.getPrediccionesDePartidos(ids) : [];
         todasPredsPartido = {};
         for (const pr of todasPreds) {
           if (!pr.participantes) continue;
@@ -393,14 +397,20 @@
               </div>
               ${predHtml}
               <div style="margin-top:6px;text-align:center;">
-                <button id="btn_pred_${p.id}" onclick="togglePredsPartido('pred_${p.id}')"
-                  style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;cursor:pointer;padding:2px 0;">
-                  Ver predicciones del grupo ▾
-                </button>
+                ${todosPredichos
+                  ? `<button id="btn_pred_${p.id}" onclick="togglePredsPartido('pred_${p.id}')"
+                      style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;cursor:pointer;padding:2px 0;">
+                      Ver predicciones del grupo ▾
+                    </button>`
+                  : `<span style="font-size:0.7rem;color:var(--text-muted);">
+                      🔒 Completa tus ${grupos.length - misPredsGrupos} predicciones restantes para ver las de los demás
+                    </span>`
+                }
               </div>
+              ${todosPredichos ? `
               <div id="pred_${p.id}" style="display:none;margin-top:6px;background:var(--surface3);border-radius:8px;padding:6px 10px;">
                 ${grupoHtml}
-              </div>
+              </div>` : ''}
             </div>`;
         }).join('') + `<div style="text-align:right;margin-top:8px;">
           <a href="resultados.html" style="font-size:0.75rem;color:var(--text-muted);text-decoration:none;">Ver todos →</a>
