@@ -37,13 +37,9 @@
       <!-- HERO -->
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px 16px;text-align:center;position:relative;z-index:1;">
 
-        <!-- Balón con anillos -->
-        <div style="position:relative;width:120px;height:120px;margin:0 auto 30px;">
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:210px;height:210px;border-radius:50%;background:radial-gradient(ellipse,rgba(201,168,76,0.09) 0%,transparent 65%);animation:glowPulse 3s ease-in-out infinite;pointer-events:none;"></div>
-          <div style="position:absolute;top:50%;left:50%;width:170px;height:170px;margin:-85px 0 0 -85px;border-radius:50%;border:1px solid rgba(201,168,76,0.3);box-shadow:0 0 14px rgba(201,168,76,0.08);animation:ringRotate 9s linear infinite;"></div>
-          <div style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:rgba(201,168,76,1);box-shadow:0 0 10px rgba(201,168,76,0.9);animation:dotOrbit 9s linear infinite;"></div>
-          <div style="position:absolute;top:50%;left:50%;width:140px;height:140px;margin:-70px 0 0 -70px;border-radius:50%;border:0.5px solid rgba(255,255,255,0.07);animation:ringRotate 5s linear infinite reverse;"></div>
-          <canvas id="ball-canvas" style="width:120px;height:120px;position:relative;z-index:2;"></canvas>
+        <!-- Banderas ondeando -->
+        <div style="margin:0 auto 28px;text-align:center;">
+          <canvas id="flags-canvas" style="display:block;margin:0 auto;border-radius:6px;"></canvas>
         </div>
 
         <h1 style="font-family:'Bebas Neue',sans-serif;font-size:3.6rem;letter-spacing:5px;margin:0;line-height:1;">
@@ -51,14 +47,6 @@
         </h1>
         <div style="height:1.5px;background:linear-gradient(90deg,transparent,rgba(201,168,76,0.8),transparent);margin:11px auto 11px;animation:lineExpand 3s ease-in-out infinite;"></div>
         <p style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:9px;color:rgba(201,168,76,0.65);margin:0 0 26px;">POLLA MUNDIALISTA</p>
-
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
-          <span style="font-size:0.62rem;font-weight:800;letter-spacing:2.5px;color:rgba(255,255,255,0.32);">USA</span>
-          <span style="width:3px;height:3px;border-radius:50%;background:rgba(201,168,76,0.35);"></span>
-          <span style="font-size:0.62rem;font-weight:800;letter-spacing:2.5px;color:rgba(255,255,255,0.32);">CANADA</span>
-          <span style="width:3px;height:3px;border-radius:50%;background:rgba(201,168,76,0.35);"></span>
-          <span style="font-size:0.62rem;font-weight:800;letter-spacing:2.5px;color:rgba(255,255,255,0.32);">MEXICO</span>
-        </div>
 
         <div style="display:inline-flex;align-items:center;gap:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:999px;padding:7px 18px;">
           <div style="width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;animation:dotBlink 2s ease-in-out infinite;"></div>
@@ -88,14 +76,8 @@
     </div>
 
     <style>
-      @keyframes ringRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-      @keyframes dotOrbit {
-        from { transform: translate(-50%,-50%) rotate(0deg) translateX(85px); }
-        to   { transform: translate(-50%,-50%) rotate(360deg) translateX(85px); }
-      }
       @keyframes glowPulse {
-        0%,100% { opacity:0.5; transform:translate(-50%,-50%) scale(1); }
-        50%     { opacity:1;   transform:translate(-50%,-50%) scale(1.18); }
+        0%,100% { opacity:0.5; } 50% { opacity:1; }
       }
       @keyframes rayPulse  { 0%,100%{opacity:0.6} 50%{opacity:1} }
       @keyframes groundGlow{ 0%,100%{opacity:0.35} 50%{opacity:1} }
@@ -105,12 +87,17 @@
         50%     { opacity:1;   box-shadow:0 0 8px 3px rgba(0,200,83,0.3); }
       }
       .shimmer-text {
-        background: linear-gradient(90deg, #999 0%, #fff 38%, #f0d060 50%, #fff 62%, #999 100%);
-        background-size: 250% 100%;
+        background: linear-gradient(90deg,
+          #006847 0%, #fff 14%,
+          #CE1126 28%, #fff 42%,
+          #002868 56%, #fff 70%,
+          #CE1126 84%, #006847 100%
+        );
+        background-size: 200% 100%;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        animation: shimmerMove 4s ease-in-out infinite;
+        animation: shimmerMove 5s linear infinite;
       }
       @keyframes shimmerMove { 0%{background-position:200% center} 100%{background-position:-200% center} }
     </style>
@@ -143,103 +130,125 @@
       frame();
     })();
 
-    // BALÓN 3D
+    // BANDERAS ONDEANDO
     (function(){
-      const canvas = document.getElementById('ball-canvas');
+      const canvas = document.getElementById('flags-canvas');
       if (!canvas) return;
       const DPR = window.devicePixelRatio || 1;
-      const SIZE = 120;
-      canvas.width  = SIZE * DPR;
-      canvas.height = SIZE * DPR;
+      const FW = 88, FH = 58, GAP = 14;
+      const W = FW * 3 + GAP * 2, H = FH + 24;
+      canvas.width  = W * DPR;
+      canvas.height = H * DPR;
+      canvas.style.width  = W + 'px';
+      canvas.style.height = H + 'px';
       const ctx = canvas.getContext('2d');
       ctx.scale(DPR, DPR);
-      const R = 52, cx = SIZE/2, cy = SIZE/2;
 
-      // 12 vértices de icosaedro (posiciones de los parches negros del balón Telstar)
-      const phi = (1 + Math.sqrt(5)) / 2;
-      const raw = [
-        [ 0,  1,  phi], [ 0, -1,  phi], [ 0,  1, -phi], [ 0, -1, -phi],
-        [ 1,  phi, 0], [-1,  phi, 0], [ 1, -phi, 0], [-1, -phi, 0],
-        [ phi, 0,  1], [-phi, 0,  1], [ phi, 0, -1], [-phi, 0, -1]
-      ];
-      const verts = raw.map(v => {
-        const len = Math.hypot(v[0], v[1], v[2]);
-        return [v[0]/len, v[1]/len, v[2]/len];
+      // Pre-renderizar cada bandera en un canvas offscreen
+      function makeFlag(drawFn) {
+        const c = document.createElement('canvas');
+        c.width = FW; c.height = FH;
+        drawFn(c.getContext('2d'), FW, FH);
+        return c;
+      }
+
+      const usa = makeFlag((x, w, h) => {
+        const sH = h / 13;
+        for (let i = 0; i < 13; i++) {
+          x.fillStyle = i % 2 === 0 ? '#B22234' : '#FFFFFF';
+          x.fillRect(0, i * sH, w, sH + 1);
+        }
+        x.fillStyle = '#3C3B6E';
+        x.fillRect(0, 0, w * 0.38, sH * 7);
+        x.fillStyle = '#FFFFFF';
+        const cols = [6, 5, 6, 5, 6, 5, 6, 5, 6], rows = 9;
+        const cw = w * 0.38 / 6, ch = sH * 7 / rows;
+        for (let r = 0; r < rows; r++) {
+          const n = cols[r], offset = r % 2 === 0 ? cw/2 : cw;
+          for (let s = 0; s < n; s++) {
+            x.beginPath();
+            x.arc(offset + s * cw, ch * 0.5 + r * ch, 1.2, 0, Math.PI * 2);
+            x.fill();
+          }
+        }
       });
 
-      let angle = 0;
+      const canada = makeFlag((x, w, h) => {
+        x.fillStyle = '#FF0000';
+        x.fillRect(0, 0, w, h);
+        x.fillStyle = '#FFFFFF';
+        x.fillRect(w * 0.25, 0, w * 0.5, h);
+        // Hoja de maple simplificada
+        x.fillStyle = '#FF0000';
+        const cx = w/2, cy = h/2, s = h * 0.32;
+        x.beginPath();
+        // Hoja de maple (11 puntas simplificadas como estrella + tronco)
+        const pts = 11, r1 = s, r2 = s * 0.45;
+        for (let i = 0; i < pts * 2; i++) {
+          const a = (i * Math.PI / pts) - Math.PI/2;
+          const r = i % 2 === 0 ? r1 : r2;
+          i === 0 ? x.moveTo(cx + Math.cos(a)*r, cy + Math.sin(a)*r)
+                  : x.lineTo(cx + Math.cos(a)*r, cy + Math.sin(a)*r);
+        }
+        x.closePath(); x.fill();
+        // Tronco
+        x.fillRect(cx - s*0.08, cy + s*0.5, s*0.16, s*0.35);
+      });
+
+      const mexico = makeFlag((x, w, h) => {
+        x.fillStyle = '#006847'; x.fillRect(0, 0, w/3, h);
+        x.fillStyle = '#FFFFFF'; x.fillRect(w/3, 0, w/3, h);
+        x.fillStyle = '#CE1126'; x.fillRect(w*2/3, 0, w/3, h);
+        // Águila simplificada (círculo marrón con detalles)
+        const cx = w/2, cy = h/2;
+        x.fillStyle = '#7B5E30';
+        x.beginPath(); x.arc(cx, cy, h*0.16, 0, Math.PI*2); x.fill();
+        x.fillStyle = '#5A4020';
+        x.beginPath(); x.arc(cx, cy, h*0.1, 0, Math.PI*2); x.fill();
+        x.fillStyle = '#8B6E3A';
+        // Alas
+        x.beginPath();
+        x.ellipse(cx - h*0.18, cy, h*0.14, h*0.07, -0.4, 0, Math.PI*2); x.fill();
+        x.beginPath();
+        x.ellipse(cx + h*0.18, cy, h*0.14, h*0.07,  0.4, 0, Math.PI*2); x.fill();
+      });
+
+      const flags = [usa, canada, mexico];
+      let t = 0;
 
       function frame() {
-        ctx.clearRect(0, 0, SIZE, SIZE);
+        ctx.clearRect(0, 0, W, H);
+        const yBase = 12;
 
-        // Sombra debajo
-        const sh = ctx.createRadialGradient(cx+4, cy+6, 0, cx+4, cy+6, R);
-        sh.addColorStop(0, 'rgba(0,0,0,0.25)');
-        sh.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.beginPath(); ctx.arc(cx+4, cy+6, R, 0, Math.PI*2);
-        ctx.fillStyle = sh; ctx.fill();
+        flags.forEach((flag, i) => {
+          const fx = i * (FW + GAP);
+          const COLS = FW;
 
-        // Esfera base
-        const sg = ctx.createRadialGradient(cx - R*0.28, cy - R*0.3, R*0.05, cx, cy, R);
-        sg.addColorStop(0,   '#ffffff');
-        sg.addColorStop(0.4, '#f0f0f0');
-        sg.addColorStop(0.75,'#c2c2c2');
-        sg.addColorStop(1,   '#7a7a7a');
-        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
-        ctx.fillStyle = sg; ctx.fill();
+          // Sombra suave debajo
+          ctx.shadowColor = 'rgba(0,0,0,0.5)';
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetY = 4;
 
-        // Parches negros con perspectiva Y
-        ctx.save();
-        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.clip();
-
-        const cosA = Math.cos(angle), sinA = Math.sin(angle);
-        verts.forEach(v => {
-          // Rotar alrededor del eje Y
-          const rx = v[0]*cosA + v[2]*sinA;
-          const ry = v[1];
-          const rz = -v[0]*sinA + v[2]*cosA;
-
-          if (rz < -0.05) return; // detrás del balón
-
-          const px = cx + rx * R;
-          const py = cy - ry * R;
-          const depth = (rz + 1) / 2; // 0 = borde, 1 = frente
-          const pSize = R * 0.21 * (0.55 + depth * 0.45);
-          const alpha = Math.max(0, (rz + 0.05) / 1.05);
-
-          // Pentágono (5 lados)
-          ctx.beginPath();
-          for (let i = 0; i < 5; i++) {
-            const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-            const ex = px + Math.cos(a) * pSize;
-            const ey = py + Math.sin(a) * pSize;
-            i === 0 ? ctx.moveTo(ex, ey) : ctx.lineTo(ex, ey);
+          // Onda: cada columna se desplaza en Y según seno
+          // Amplitud crece de izq a der (como bandera en asta a la izquierda)
+          for (let col = 0; col < COLS; col++) {
+            const progress = col / COLS;
+            const amp = 5 * progress;
+            const wave = Math.sin(col * 0.16 + t + i * 0.8) * amp;
+            ctx.drawImage(flag, col, 0, 1, FH, fx + col, yBase + wave, 1, FH);
           }
-          ctx.closePath();
-          ctx.fillStyle = `rgba(14,14,14,${alpha * 0.88})`;
-          ctx.fill();
-          ctx.strokeStyle = `rgba(0,0,0,${alpha * 0.4})`;
-          ctx.lineWidth = 0.8;
-          ctx.stroke();
+
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetY = 0;
+
+          // Borde/marco sutil
+          ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(fx + 0.5, yBase + 0.5, FW - 1, FH - 1);
         });
-        ctx.restore();
 
-        // Brillo especular
-        const sp = ctx.createRadialGradient(cx - R*0.3, cy - R*0.32, 0, cx - R*0.3, cy - R*0.32, R*0.5);
-        sp.addColorStop(0,   'rgba(255,255,255,0.6)');
-        sp.addColorStop(0.35,'rgba(255,255,255,0.18)');
-        sp.addColorStop(1,   'rgba(255,255,255,0)');
-        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
-        ctx.fillStyle = sp; ctx.fill();
-
-        // Oscurecimiento de bordes
-        const eg = ctx.createRadialGradient(cx, cy, R*0.65, cx, cy, R);
-        eg.addColorStop(0, 'rgba(0,0,0,0)');
-        eg.addColorStop(1, 'rgba(0,0,0,0.38)');
-        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
-        ctx.fillStyle = eg; ctx.fill();
-
-        angle += 0.012;
+        t += 0.04;
         requestAnimationFrame(frame);
       }
       frame();
