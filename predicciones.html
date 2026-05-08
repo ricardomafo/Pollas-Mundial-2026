@@ -24,26 +24,13 @@
 
   <div class="max-w-app" style="padding:0 16px;">
 
-    <!-- CAMPEÓN -->
-    <div style="position:sticky; top:60px; z-index:30; padding:10px 0 4px; background:var(--bg);">
-      <div class="card" style="background:var(--surface2); border-color:rgba(201,168,76,0.25); margin-bottom:0; padding:14px 16px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-          <div>
-            <p style="font-weight:700; color:var(--gold); font-size:0.85rem; margin:0;">CAMPEÓN DEL MUNDIAL</p>
-          </div>
-          <span id="campeon-guardado" class="saved-indicator hidden" style="margin-left:auto;">Guardado</span>
-        </div>
-        <div id="campeon-editable" style="display:flex; gap:8px;">
-          <select id="campeon-select" class="input-field" style="flex:1;">
-            <option value="">Elige un equipo</option>
-          </select>
-          <button onclick="guardarCampeon()" class="btn-gold btn-sm" style="white-space:nowrap; font-size:0.8rem;">
-            Guardar
-          </button>
-        </div>
-        <div id="campeon-bloqueado" class="hidden" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface3); border-radius:8px;">
-          <span id="campeon-nombre-bloqueado" style="flex:1; font-weight:700; font-size:0.95rem; color:var(--gold-light);"></span>
-          <span class="saved-indicator">Guardado</span>
+    <!-- AVISO FECHA LÍMITE -->
+    <div id="aviso-deadline" class="hidden" style="margin:12px 0 4px;">
+      <div style="background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.3rem;flex-shrink:0;">🔒</span>
+        <div>
+          <p style="font-weight:800;color:#ff4444;font-size:0.88rem;margin:0 0 2px;">Plazo cerrado</p>
+          <p style="color:var(--text-muted);font-size:0.78rem;margin:0;">El plazo para registrar predicciones terminó el 31 de mayo. Ya no se pueden modificar.</p>
         </div>
       </div>
     </div>
@@ -112,36 +99,25 @@
         document.getElementById('header-nombre').textContent = part.nombre;
       } catch(e) { window.location.href = 'index.html'; return; }
 
+      // Verificar fecha límite: 31 de mayo de 2026
+      const DEADLINE = new Date('2026-06-01T00:00:00');
+      const plazoVencido = new Date() >= DEADLINE;
+      if (plazoVencido) {
+        document.getElementById('aviso-deadline').classList.remove('hidden');
+        document.getElementById('btn-guardar').style.display = 'none';
+      }
+
       try {
-        const [partidos, predicciones, equipos, campeon] = await Promise.all([
+        const [partidos, predicciones, equipos] = await Promise.all([
           db.getTodosPartidos(),
           db.getPrediccionesPorParticipante(usuarioActual.id),
           db.getEquipos(),
-          db.getCampeon(usuarioActual.id)
         ]);
 
         todosPartidos = partidos;
         todosEquipos  = equipos;
 
         predicciones.forEach(p => { misPredicciones[p.partido_id] = p; });
-
-        // Cargar equipos en el select de campeón
-        const sel = document.getElementById('campeon-select');
-        const grupos = [...new Set(equipos.map(e => e.grupo))].sort();
-        grupos.forEach(g => {
-          const og = document.createElement('optgroup');
-          og.label = `Grupo ${g}`;
-          equipos.filter(e => e.grupo === g).forEach(eq => {
-            const opt = document.createElement('option');
-            opt.value = eq.nombre;
-            opt.textContent = getFlag(eq.nombre) + ' ' + eq.nombre;
-            og.appendChild(opt);
-          });
-          sel.appendChild(og);
-        });
-        if (campeon) {
-          bloquearCampeon(campeon.equipo);
-        }
 
         // Asegurar que existen los partidos eliminatorios en DB
         await asegurarPartidosEliminatorios();
@@ -502,11 +478,18 @@
       const fV = getFlag(visitaNombre);
       const esTBD = localNombre === 'Por definir' || localNombre.startsWith('[');
 
+      const plazoVencido = new Date() >= new Date('2026-06-01T00:00:00');
       const inputsHtml = pred
         ? `<div style="display:flex; gap:4px; flex-shrink:0;">
              <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:800; font-size:1.2rem; color:var(--gold-light);">${pred.goles_local}</div>
              <div style="display:flex; align-items:center; padding:0 2px; color:var(--text-dim);">–</div>
              <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:800; font-size:1.2rem; color:var(--gold-light);">${pred.goles_visitante}</div>
+           </div>`
+        : plazoVencido
+        ? `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; color:var(--text-dim); font-size:1.1rem;">🔒</div>
+             <span class="score-sep">–</span>
+             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; color:var(--text-dim); font-size:1.1rem;">🔒</div>
            </div>`
         : `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
              <input type="number" id="pl-${partido.id}" class="score-input" min="0" max="20" placeholder="–" ${esTBD?'disabled':''} oninput="marcarMod(${partido.id})" onwheel="this.blur()">
@@ -555,29 +538,15 @@
     // =====================================================
     // GUARDAR CAMPEÓN
     // =====================================================
-    async function guardarCampeon() {
-      const equipo = document.getElementById('campeon-select').value;
-      if (!equipo) { mostrarToast('Elige un equipo'); return; }
-      try {
-        await db.guardarCampeon(usuarioActual.id, equipo);
-        bloquearCampeon(equipo);
-        mostrarToast('Campeón guardado');
-      } catch(e) { mostrarToast('Error al guardar'); }
-    }
-
-    function bloquearCampeon(equipo) {
-      document.getElementById('campeon-editable').classList.add('hidden');
-      const bloqueado = document.getElementById('campeon-bloqueado');
-      bloqueado.classList.remove('hidden');
-      bloqueado.style.display = 'flex';
-      document.getElementById('campeon-nombre-bloqueado').textContent = getFlag(equipo) + ' ' + equipo;
-    }
-
     // =====================================================
     // GUARDAR TODO
     // =====================================================
     async function guardarTodo() {
       if (!usuarioActual) return;
+      if (new Date() >= new Date('2026-06-01T00:00:00')) {
+        mostrarToast('🔒 El plazo para subir predicciones terminó el 31 de mayo');
+        return;
+      }
       const btn = document.getElementById('btn-guardar');
       btn.disabled = true;
       btn.textContent = 'Guardando...';
