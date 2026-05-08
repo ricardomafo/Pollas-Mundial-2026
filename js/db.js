@@ -86,7 +86,8 @@ window.db = {
    * Obtiene participantes, filtrado por grupo si se especifica
    */
   async getTodosParticipantes(grupo) {
-    let query = supabaseClient.from('participantes').select('*');
+    let query = supabaseClient.from('participantes').select('*')
+      .or('estado.eq.aprobado,estado.is.null');  // excluir pendientes y rechazados
     if (grupo) query = query.eq('grupo', grupo);
     query = query.order('nombre');
     const { data, error } = await query;
@@ -190,8 +191,9 @@ window.db = {
     if (!partidoIds || partidoIds.length === 0) return [];
     const { data, error } = await supabaseClient
       .from('predicciones')
-      .select('partido_id, goles_local, goles_visitante, participantes(nombre, grupo)')
-      .in('partido_id', partidoIds);
+      .select('partido_id, goles_local, goles_visitante, participantes!inner(nombre, grupo, estado)')
+      .in('partido_id', partidoIds)
+      .or('estado.eq.aprobado,estado.is.null', { referencedTable: 'participantes' });
     if (error) throw error;
     return data || [];
   },
