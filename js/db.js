@@ -30,12 +30,42 @@ window.db = {
 
     const { data, error } = await supabaseClient
       .from('participantes')
-      .insert({ nombre: nombreLimpio, grupo })
+      .insert({ nombre: nombreLimpio, grupo, estado: 'pendiente' })
       .select()
       .single();
 
     if (error) throw error;
     return data;
+  },
+
+  async aprobarParticipante(id) {
+    const { error } = await supabaseClient
+      .from('participantes').update({ estado: 'aprobado' }).eq('id', id);
+    if (error) throw error;
+  },
+
+  async rechazarParticipante(id) {
+    const { error } = await supabaseClient
+      .from('participantes').update({ estado: 'rechazado' }).eq('id', id);
+    if (error) throw error;
+  },
+
+  async getPendientes(grupo) {
+    const { data, error } = await supabaseClient
+      .from('participantes').select('*')
+      .eq('grupo', grupo).eq('estado', 'pendiente')
+      .order('creado_en', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getAprobados(grupo) {
+    const { data, error } = await supabaseClient
+      .from('participantes').select('*')
+      .eq('grupo', grupo).eq('estado', 'aprobado')
+      .order('nombre', { ascending: true });
+    if (error) throw error;
+    return data || [];
   },
 
   /**

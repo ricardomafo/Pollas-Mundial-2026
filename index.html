@@ -173,6 +173,8 @@
           const part = await db.getParticipante(userName, userGrupo);
           if (part) {
             usuarioActual = part;
+            if (part.estado === 'rechazado') { mostrarRechazado(); return; }
+            if (part.estado === 'pendiente')  { mostrarPendiente(); return; }
             mostrarBienvenida(part);
           } else {
             localStorage.removeItem('mundial_user_id');
@@ -187,6 +189,31 @@
       } else {
         mostrarRegistro();
       }
+    }
+
+    function mostrarPendiente() {
+      document.getElementById('registro-section').classList.add('hidden');
+      document.getElementById('bottom-nav').style.display = 'none';
+      document.body.innerHTML = `
+        <div style="min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;background:var(--bg);">
+          <div style="font-size:3.5rem;margin-bottom:16px;">⏳</div>
+          <h2 style="color:var(--gold);font-size:1.4rem;margin:0 0 10px;font-weight:900;">Solicitud enviada</h2>
+          <p style="color:var(--text-muted);font-size:0.9rem;margin:0 0 6px;">Tu registro está pendiente de aprobación.</p>
+          <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 28px;">El administrador de tu grupo te tiene que aceptar para poder participar.</p>
+          <button onclick="cambiarUsuario()" style="padding:12px 28px;background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:12px;cursor:pointer;font-size:0.9rem;">Usar otro nombre</button>
+        </div>`;
+    }
+
+    function mostrarRechazado() {
+      document.getElementById('registro-section').classList.add('hidden');
+      document.getElementById('bottom-nav').style.display = 'none';
+      document.body.innerHTML = `
+        <div style="min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;background:var(--bg);">
+          <div style="font-size:3.5rem;margin-bottom:16px;">🚫</div>
+          <h2 style="color:var(--red,#ff4444);font-size:1.4rem;margin:0 0 10px;font-weight:900;">Acceso denegado</h2>
+          <p style="color:var(--text-muted);font-size:0.9rem;margin:0 0 28px;">Tu solicitud fue rechazada por el administrador del grupo.</p>
+          <button onclick="cambiarUsuario()" style="padding:12px 28px;background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:12px;cursor:pointer;font-size:0.9rem;">Volver</button>
+        </div>`;
     }
 
     function mostrarRegistro() {
@@ -459,6 +486,8 @@
         localStorage.setItem('mundial_user_grupo', participante.grupo);
         localStorage.setItem('mundial_user_admin', participante.es_admin ? 'true' : 'false');
         usuarioActual = participante;
+        if (participante.estado === 'rechazado') { mostrarRechazado(); return; }
+        if (participante.estado === 'pendiente')  { mostrarPendiente(); return; }
         mostrarBienvenida(participante);
       } catch (e) {
         console.error(e);
