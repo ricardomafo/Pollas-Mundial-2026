@@ -366,9 +366,9 @@
 
         titulo.textContent = labelTitulo;
 
-        // Verificar si el usuario ha predicho TODOS los partidos de grupos
-        const misPredsGrupos = grupos.filter(p => misPreds[p.id]).length;
-        const todosPredichos = misPredsGrupos >= grupos.length && grupos.length > 0;
+        // Verificar si el usuario ha predicho TODOS los 104 partidos
+        const misPredsTotal = partidos.filter(p => misPreds[p.id]).length;
+        const todosPredichos = misPredsTotal >= partidos.length && partidos.length > 0;
 
         if (mostrar.length === 0) {
           container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:12px 0;">El Mundial empieza el 11 de junio de 2026</p>`;
@@ -468,7 +468,7 @@
                       Ver predicciones del grupo ▾
                     </button>`
                   : `<span style="font-size:0.7rem;color:var(--text-muted);">
-                      🔒 Completa tus ${grupos.length - misPredsGrupos} predicciones restantes para ver las de los demás
+                      🔒 Completa tus ${partidos.length - misPredsTotal} predicciones restantes para ver las de los demás
                     </span>`
                 }
               </div>
