@@ -43,29 +43,7 @@
           <div style="position:absolute;top:50%;left:50%;width:170px;height:170px;margin:-85px 0 0 -85px;border-radius:50%;border:1px solid rgba(201,168,76,0.3);box-shadow:0 0 14px rgba(201,168,76,0.08);animation:ringRotate 9s linear infinite;"></div>
           <div style="position:absolute;top:50%;left:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:rgba(201,168,76,1);box-shadow:0 0 10px rgba(201,168,76,0.9);animation:dotOrbit 9s linear infinite;"></div>
           <div style="position:absolute;top:50%;left:50%;width:140px;height:140px;margin:-70px 0 0 -70px;border-radius:50%;border:0.5px solid rgba(255,255,255,0.07);animation:ringRotate 5s linear infinite reverse;"></div>
-          <svg style="width:120px;height:120px;position:relative;z-index:2;animation:ballSpin 10s linear infinite;filter:drop-shadow(0 2px 18px rgba(255,255,255,0.1));" viewBox="0 0 100 100">
-            <defs>
-              <radialGradient id="bg1" cx="36%" cy="30%" r="70%">
-                <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="55%" stop-color="#d4d4d4"/>
-                <stop offset="100%" stop-color="#999"/>
-              </radialGradient>
-              <clipPath id="bc"><circle cx="50" cy="50" r="47"/></clipPath>
-            </defs>
-            <circle cx="50" cy="50" r="48" fill="url(#bg1)" stroke="rgba(0,0,0,0.2)" stroke-width="0.8"/>
-            <g clip-path="url(#bc)" fill="#111" stroke="#000" stroke-width="0.5" stroke-linejoin="round">
-              <polygon points="50,13 59,21 56,32 44,32 41,21"/>
-              <polygon points="50,13 64,7 74,18 68,30 59,21"/>
-              <polygon points="50,13 36,7 26,18 32,30 41,21"/>
-              <polygon points="56,32 68,30 76,42 68,53 56,47"/>
-              <polygon points="44,32 32,30 24,42 32,53 44,47"/>
-              <polygon points="56,47 68,53 65,65 50,69 35,65 32,53 44,47"/>
-              <polygon points="50,69 59,77 55,88 45,88 41,77"/>
-              <polygon points="65,65 76,68 74,80 59,77 50,69"/>
-              <polygon points="35,65 24,68 26,80 41,77 50,69"/>
-            </g>
-            <ellipse cx="38" cy="33" rx="9" ry="5.5" fill="rgba(255,255,255,0.22)" transform="rotate(-30 38 33)"/>
-          </svg>
+          <canvas id="ball-canvas" style="width:120px;height:120px;position:relative;z-index:2;"></canvas>
         </div>
 
         <h1 style="font-family:'Bebas Neue',sans-serif;font-size:3.6rem;letter-spacing:5px;margin:0;line-height:1;">
@@ -115,7 +93,6 @@
         from { transform: translate(-50%,-50%) rotate(0deg) translateX(85px); }
         to   { transform: translate(-50%,-50%) rotate(360deg) translateX(85px); }
       }
-      @keyframes ballSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
       @keyframes glowPulse {
         0%,100% { opacity:0.5; transform:translate(-50%,-50%) scale(1); }
         50%     { opacity:1;   transform:translate(-50%,-50%) scale(1.18); }
@@ -139,6 +116,7 @@
     </style>
 
     <script>
+    // PARTÍCULAS
     (function(){
       const canvas = document.getElementById('hero-canvas');
       if (!canvas) return;
@@ -160,6 +138,108 @@
           p.y-=p.vy; p.x+=p.vx;
           if(p.y<-4){ p.y=H+4; p.x=Math.random()*W; p.a=Math.random()*0.35+0.05; }
         });
+        requestAnimationFrame(frame);
+      }
+      frame();
+    })();
+
+    // BALÓN 3D
+    (function(){
+      const canvas = document.getElementById('ball-canvas');
+      if (!canvas) return;
+      const DPR = window.devicePixelRatio || 1;
+      const SIZE = 120;
+      canvas.width  = SIZE * DPR;
+      canvas.height = SIZE * DPR;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(DPR, DPR);
+      const R = 52, cx = SIZE/2, cy = SIZE/2;
+
+      // 12 vértices de icosaedro (posiciones de los parches negros del balón Telstar)
+      const phi = (1 + Math.sqrt(5)) / 2;
+      const raw = [
+        [ 0,  1,  phi], [ 0, -1,  phi], [ 0,  1, -phi], [ 0, -1, -phi],
+        [ 1,  phi, 0], [-1,  phi, 0], [ 1, -phi, 0], [-1, -phi, 0],
+        [ phi, 0,  1], [-phi, 0,  1], [ phi, 0, -1], [-phi, 0, -1]
+      ];
+      const verts = raw.map(v => {
+        const len = Math.hypot(v[0], v[1], v[2]);
+        return [v[0]/len, v[1]/len, v[2]/len];
+      });
+
+      let angle = 0;
+
+      function frame() {
+        ctx.clearRect(0, 0, SIZE, SIZE);
+
+        // Sombra debajo
+        const sh = ctx.createRadialGradient(cx+4, cy+6, 0, cx+4, cy+6, R);
+        sh.addColorStop(0, 'rgba(0,0,0,0.25)');
+        sh.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.beginPath(); ctx.arc(cx+4, cy+6, R, 0, Math.PI*2);
+        ctx.fillStyle = sh; ctx.fill();
+
+        // Esfera base
+        const sg = ctx.createRadialGradient(cx - R*0.28, cy - R*0.3, R*0.05, cx, cy, R);
+        sg.addColorStop(0,   '#ffffff');
+        sg.addColorStop(0.4, '#f0f0f0');
+        sg.addColorStop(0.75,'#c2c2c2');
+        sg.addColorStop(1,   '#7a7a7a');
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+        ctx.fillStyle = sg; ctx.fill();
+
+        // Parches negros con perspectiva Y
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.clip();
+
+        const cosA = Math.cos(angle), sinA = Math.sin(angle);
+        verts.forEach(v => {
+          // Rotar alrededor del eje Y
+          const rx = v[0]*cosA + v[2]*sinA;
+          const ry = v[1];
+          const rz = -v[0]*sinA + v[2]*cosA;
+
+          if (rz < -0.05) return; // detrás del balón
+
+          const px = cx + rx * R;
+          const py = cy - ry * R;
+          const depth = (rz + 1) / 2; // 0 = borde, 1 = frente
+          const pSize = R * 0.21 * (0.55 + depth * 0.45);
+          const alpha = Math.max(0, (rz + 0.05) / 1.05);
+
+          // Pentágono (5 lados)
+          ctx.beginPath();
+          for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+            const ex = px + Math.cos(a) * pSize;
+            const ey = py + Math.sin(a) * pSize;
+            i === 0 ? ctx.moveTo(ex, ey) : ctx.lineTo(ex, ey);
+          }
+          ctx.closePath();
+          ctx.fillStyle = `rgba(14,14,14,${alpha * 0.88})`;
+          ctx.fill();
+          ctx.strokeStyle = `rgba(0,0,0,${alpha * 0.4})`;
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        });
+        ctx.restore();
+
+        // Brillo especular
+        const sp = ctx.createRadialGradient(cx - R*0.3, cy - R*0.32, 0, cx - R*0.3, cy - R*0.32, R*0.5);
+        sp.addColorStop(0,   'rgba(255,255,255,0.6)');
+        sp.addColorStop(0.35,'rgba(255,255,255,0.18)');
+        sp.addColorStop(1,   'rgba(255,255,255,0)');
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+        ctx.fillStyle = sp; ctx.fill();
+
+        // Oscurecimiento de bordes
+        const eg = ctx.createRadialGradient(cx, cy, R*0.65, cx, cy, R);
+        eg.addColorStop(0, 'rgba(0,0,0,0)');
+        eg.addColorStop(1, 'rgba(0,0,0,0.38)');
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+        ctx.fillStyle = eg; ctx.fill();
+
+        angle += 0.012;
         requestAnimationFrame(frame);
       }
       frame();
