@@ -45,11 +45,14 @@
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px 24px;text-align:center;position:relative;z-index:1;">
 
         <!-- Trofeo animado -->
-        <div style="font-size:4.5rem;margin-bottom:12px;filter:drop-shadow(0 0 24px rgba(201,168,76,0.5));animation:trofeoPulse 3s ease-in-out infinite;">🏆</div>
+        <div style="position:relative;margin-bottom:16px;">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;border-radius:50%;background:radial-gradient(ellipse,rgba(201,168,76,0.25) 0%,transparent 70%);animation:trofeoBrillo 2s ease-in-out infinite;"></div>
+          <div style="font-size:5rem;position:relative;z-index:1;animation:trofeoRebote 1.8s cubic-bezier(0.36,0.07,0.19,0.97) infinite;display:block;text-align:center;">🏆</div>
+        </div>
 
         <!-- Título -->
-        <h1 style="font-family:'Bebas Neue',sans-serif;font-size:3.4rem;letter-spacing:4px;margin:0;line-height:1;background:linear-gradient(135deg,#fff 30%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">MUNDIAL 2026</h1>
-        <p style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:6px;color:var(--gold);margin:6px 0 20px;opacity:0.9;">POLLA DEPORTIVA</p>
+        <h1 style="font-family:'Bebas Neue',sans-serif;font-size:3.4rem;letter-spacing:4px;margin:0;line-height:1;background:linear-gradient(135deg,#fff 30%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:tituloBrilla 3s ease-in-out infinite;">MUNDIAL 2026</h1>
+        <p style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:6px;color:var(--gold);margin:6px 0 20px;opacity:0.9;">POLLA MUNDIALISTA</p>
 
         <!-- Banderas sedes -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
@@ -114,9 +117,21 @@
     </div>
 
     <style>
-      @keyframes trofeoPulse {
-        0%,100% { transform: scale(1) rotate(-2deg); filter: drop-shadow(0 0 20px rgba(201,168,76,0.4)); }
-        50%      { transform: scale(1.06) rotate(2deg); filter: drop-shadow(0 0 36px rgba(201,168,76,0.7)); }
+      @keyframes trofeoRebote {
+        0%   { transform: translateY(0) scale(1) rotate(0deg); filter: drop-shadow(0 0 16px rgba(201,168,76,0.5)); }
+        15%  { transform: translateY(-18px) scale(1.08) rotate(-3deg); filter: drop-shadow(0 8px 32px rgba(201,168,76,0.8)); }
+        30%  { transform: translateY(0) scale(0.97) rotate(0deg); filter: drop-shadow(0 0 16px rgba(201,168,76,0.5)); }
+        45%  { transform: translateY(-8px) scale(1.04) rotate(2deg); filter: drop-shadow(0 4px 24px rgba(201,168,76,0.65)); }
+        60%  { transform: translateY(0) scale(1) rotate(0deg); filter: drop-shadow(0 0 16px rgba(201,168,76,0.5)); }
+        100% { transform: translateY(0) scale(1) rotate(0deg); filter: drop-shadow(0 0 16px rgba(201,168,76,0.5)); }
+      }
+      @keyframes trofeoBrillo {
+        0%,100% { transform: translate(-50%,-50%) scale(1); opacity:0.6; }
+        50%      { transform: translate(-50%,-50%) scale(1.4); opacity:1; }
+      }
+      @keyframes tituloBrilla {
+        0%,100% { filter: brightness(1); }
+        50%      { filter: brightness(1.25) drop-shadow(0 0 12px rgba(201,168,76,0.4)); }
       }
     </style>
 
