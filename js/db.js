@@ -55,7 +55,7 @@ window.db = {
       .from('participantes').select('*')
       .eq('grupo', grupo).eq('estado', 'pendiente')
       .order('creado_en', { ascending: true });
-    if (error) throw error;
+    if (error) return []; // columna puede no existir aun
     return data || [];
   },
 
@@ -64,7 +64,12 @@ window.db = {
       .from('participantes').select('*')
       .eq('grupo', grupo).eq('estado', 'aprobado')
       .order('nombre', { ascending: true });
-    if (error) throw error;
+    if (error) {
+      // Fallback: si la columna estado no existe, traer todos del grupo
+      const { data: all } = await supabaseClient
+        .from('participantes').select('*').eq('grupo', grupo).order('nombre');
+      return all || [];
+    }
     return data || [];
   },
 
@@ -87,11 +92,17 @@ window.db = {
    */
   async getTodosParticipantes(grupo) {
     let query = supabaseClient.from('participantes').select('*')
-      .or('estado.eq.aprobado,estado.is.null');  // excluir pendientes y rechazados
+      .or('estado.eq.aprobado,estado.is.null');
     if (grupo) query = query.eq('grupo', grupo);
     query = query.order('nombre');
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      // Fallback: traer todos si la columna no existe aun
+      let q2 = supabaseClient.from('participantes').select('*');
+      if (grupo) q2 = q2.eq('grupo', grupo);
+      const { data: all } = await q2.order('nombre');
+      return all || [];
+    }
     return data || [];
   },
 

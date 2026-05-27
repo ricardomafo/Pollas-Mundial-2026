@@ -335,16 +335,16 @@
       if (!el) return;
       try {
         const grupo = localStorage.getItem('mundial_user_grupo');
-        const [todosPartidos, todasPreds] = await Promise.all([
+        const ids = clasificacion.map(p => p.id);
+        const [todosPartidos, rawPreds] = await Promise.all([
           db.getTodosPartidos(),
-          db.getTodasPredicciones(grupo)
+          supabaseClient.from('predicciones').select('participante_id').in('participante_id', ids)
+            .then(r => r.data || [])
         ]);
         const totalPartidos = todosPartidos.length;
-        // Contar predicciones por participante
         const conteo = {};
-        todasPreds.forEach(p => {
-          if (!conteo[p.participante_id]) conteo[p.participante_id] = 0;
-          conteo[p.participante_id]++;
+        rawPreds.forEach(p => {
+          conteo[p.participante_id] = (conteo[p.participante_id] || 0) + 1;
         });
         const completados = clasificacion.filter(p => (conteo[p.id] || 0) >= totalPartidos);
         const pendientes  = clasificacion.filter(p => (conteo[p.id] || 0) < totalPartidos);
