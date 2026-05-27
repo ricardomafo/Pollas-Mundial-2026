@@ -97,6 +97,7 @@
         const part = await db.getParticipante(userName, userGrupo);
         if (!part) { localStorage.clear(); window.location.href = 'index.html'; return; }
         usuarioActual = part;
+        window._esBX = (part.grupo === 'BX');
         document.getElementById('header-nombre').textContent = part.nombre;
       } catch(e) { window.location.href = 'index.html'; return; }
 
@@ -479,23 +480,33 @@
       const fV = getFlag(visitaNombre);
       const esTBD = localNombre === 'Por definir' || localNombre.startsWith('[');
 
-      const plazoVencido = new Date() >= new Date('2026-06-01T00:00:00');
-      const inputsHtml = pred
+      // Para BX: plazo individual por partido (10 min antes)
+      function partidoAbierto(p) {
+        if (!window._esBX) return new Date() < new Date('2026-06-01T00:00:00');
+        if (!p.fecha || !p.hora) return true;
+        const inicio = new Date(p.fecha + 'T' + p.hora);
+        return new Date() < new Date(inicio.getTime() - 10 * 60 * 1000);
+      }
+      const abierto = partidoAbierto(partido);
+      // BX puede editar aunque ya tenga pred guardada, si el plazo está abierto
+      const puedeEditar = abierto && (!pred || window._esBX);
+
+      const inputsHtml = puedeEditar
+        ? `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+             <input type="number" id="pl-${partido.id}" class="score-input" min="0" max="20" placeholder="–" value="${pred && window._esBX ? pred.goles_local : ''}" ${esTBD?'disabled':''} oninput="marcarMod(${partido.id})" onwheel="this.blur()">
+             <span class="score-sep">–</span>
+             <input type="number" id="pv-${partido.id}" class="score-input" min="0" max="20" placeholder="–" value="${pred && window._esBX ? pred.goles_visitante : ''}" ${esTBD?'disabled':''} oninput="marcarMod(${partido.id})" onwheel="this.blur()">
+           </div>`
+        : pred
         ? `<div style="display:flex; gap:4px; flex-shrink:0;">
              <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:800; font-size:1.2rem; color:var(--gold-light);">${pred.goles_local}</div>
              <div style="display:flex; align-items:center; padding:0 2px; color:var(--text-dim);">–</div>
              <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; font-weight:800; font-size:1.2rem; color:var(--gold-light);">${pred.goles_visitante}</div>
            </div>`
-        : plazoVencido
-        ? `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; color:var(--text-dim); font-size:1.1rem;">🔒</div>
-             <span class="score-sep">–</span>
-             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; color:var(--text-dim); font-size:1.1rem;">🔒</div>
-           </div>`
         : `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-             <input type="number" id="pl-${partido.id}" class="score-input" min="0" max="20" placeholder="–" ${esTBD?'disabled':''} oninput="marcarMod(${partido.id})" onwheel="this.blur()">
+             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; color:var(--text-dim); font-size:1.1rem;">🔒</div>
              <span class="score-sep">–</span>
-             <input type="number" id="pv-${partido.id}" class="score-input" min="0" max="20" placeholder="–" ${esTBD?'disabled':''} oninput="marcarMod(${partido.id})" onwheel="this.blur()">
+             <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--surface3); border-radius:8px; color:var(--text-dim); font-size:1.1rem;">🔒</div>
            </div>`;
 
       const puntosHtml = jugado && pred ? getPuntosHtml(pred, partido) : '';
@@ -544,7 +555,7 @@
     // =====================================================
     async function guardarTodo() {
       if (!usuarioActual) return;
-      if (new Date() >= new Date('2026-06-01T00:00:00')) {
+      if (!window._esBX && new Date() >= new Date('2026-06-01T00:00:00')) {
         mostrarToast('🔒 El plazo para subir predicciones terminó el 31 de mayo');
         return;
       }
@@ -557,7 +568,16 @@
       let contador = 0;
 
       for (const fase of fases) {
-        const partidos = todosPartidos.filter(p => p.fase === fase && !p.jugado && !misPredicciones[p.id]);
+        const partidos = todosPartidos.filter(p => {
+          if (p.fase !== fase || p.jugado) return false;
+          if (window._esBX) {
+            // BX: guardar si hay input (aunque ya tenga pred) y si el plazo está abierto
+            if (!p.fecha || !p.hora) return false;
+            const inicio = new Date(p.fecha + 'T' + p.hora);
+            return new Date() < new Date(inicio.getTime() - 10 * 60 * 1000);
+          }
+          return !misPredicciones[p.id];
+        });
         for (const partido of partidos) {
           const lEl = document.getElementById(`pl-${partido.id}`);
           const vEl = document.getElementById(`pv-${partido.id}`);

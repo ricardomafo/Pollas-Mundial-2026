@@ -18,4 +18,5 @@ const GRUPOS = {
   'FAMILIA':    'Familia',
   'BANCOLDEX':  'Bancoldex',
   'FORERO':     'Familia Forero Guerrero',
+  'BX':         'BX',
 };
