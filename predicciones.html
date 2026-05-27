@@ -88,12 +88,13 @@
     // INIT
     // =====================================================
     async function init() {
-      const userId   = localStorage.getItem('mundial_user_id');
-      const userName = localStorage.getItem('mundial_user_nombre');
+      const userId    = localStorage.getItem('mundial_user_id');
+      const userName  = localStorage.getItem('mundial_user_nombre');
+      const userGrupo = localStorage.getItem('mundial_user_grupo');
       if (!userId || !userName) { window.location.href = 'index.html'; return; }
 
       try {
-        const part = await db.getParticipante(userName);
+        const part = await db.getParticipante(userName, userGrupo);
         if (!part) { localStorage.clear(); window.location.href = 'index.html'; return; }
         usuarioActual = part;
         document.getElementById('header-nombre').textContent = part.nombre;
