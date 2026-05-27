@@ -55,6 +55,17 @@
       </div>
     </div>
 
+  <!-- DESCARGA EXCEL -->
+  <div style="max-width:720px;margin:0 auto;padding:0 16px 28px;">
+    <div style="border-top:1px solid var(--border);margin-bottom:24px;"></div>
+    <h2 style="font-size:1rem;font-weight:800;margin:0 0 4px;color:var(--text);">📥 Backup de predicciones</h2>
+    <p style="color:var(--text-muted);font-size:0.82rem;margin:0 0 14px;">Descarga todas las predicciones del grupo en un archivo Excel.</p>
+    <button onclick="descargarExcel()" id="btn-excel" style="padding:12px 20px;background:rgba(0,200,83,0.12);border:1px solid rgba(0,200,83,0.35);color:var(--green);border-radius:10px;font-weight:700;font-size:0.88rem;cursor:pointer;display:flex;align-items:center;gap:8px;">
+      ⬇️ Descargar Excel (.csv)
+    </button>
+    <p id="excel-status" style="color:var(--text-muted);font-size:0.78rem;margin-top:8px;display:none;"></p>
+  </div>
+
   </div>
 
   <div id="toast" class="toast"></div>
@@ -216,6 +227,77 @@
 
     function escapeHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function descargarExcel() {
+      const btn = document.getElementById('btn-excel');
+      const status = document.getElementById('excel-status');
+      btn.textContent = '⏳ Generando...';
+      btn.disabled = true;
+      status.style.display = 'block';
+      status.textContent = 'Cargando datos...';
+
+      try {
+        const [partidos, preds, participantes] = await Promise.all([
+          db.getTodosPartidos(),
+          db.getTodasPredicciones(adminGrupo),
+          db.getTodosParticipantes(adminGrupo)
+        ]);
+
+        // Ordenar partidos por fase y orden
+        partidos.sort((a,b) => (a.orden||0)-(b.orden||0));
+
+        // Mapa pred por participante+partido
+        const predMap = {};
+        preds.forEach(p => {
+          const key = p.participante_id + '_' + p.partido_id;
+          predMap[key] = p;
+        });
+
+        // Cabecera
+        const headers = ['Partido','Fase','Equipo Local','Equipo Visitante','Fecha','Hora']
+          .concat(participantes.map(p => p.nombre));
+        const rows = [headers];
+
+        partidos.forEach(p => {
+          const row = [
+            p.orden || '',
+            p.fase || '',
+            p.equipo_local || '',
+            p.equipo_visitante || '',
+            p.fecha || '',
+            p.hora || ''
+          ];
+          participantes.forEach(part => {
+            const pred = predMap[part.id + '_' + p.id];
+            row.push(pred ? pred.goles_local + '-' + pred.goles_visitante : '');
+          });
+          rows.push(row);
+        });
+
+        // Generar CSV
+        const csv = rows.map(r =>
+          r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')
+        ).join('
+');
+
+        const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8;'});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = 'predicciones_' + adminGrupo + '_' + new Date().toISOString().slice(0,10) + '.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        status.textContent = '✅ Descargado correctamente';
+        mostrarToast('✅ Excel descargado');
+      } catch(e) {
+        status.textContent = 'Error: ' + e.message;
+        mostrarToast('Error al generar Excel');
+      }
+
+      btn.textContent = '⬇️ Descargar Excel (.csv)';
+      btn.disabled = false;
     }
 
     function escapeAttr(str) {

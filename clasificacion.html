@@ -35,6 +35,9 @@
       <!-- PODIO TOP 3 -->
       <div id="podio-section" style="margin-bottom: 20px;"></div>
 
+      <!-- COMPLETADOS -->
+      <div id="completados-section" style="margin-bottom:20px;"></div>
+
       <!-- TABLA COMPLETA -->
       <div style="margin-bottom: 16px;">
         <p class="card-title" style="margin-bottom:10px;">Clasificación completa</p>
@@ -207,6 +210,7 @@
         renderizarPodio(clasificacion);
         renderizarTabla(clasificacion);
         renderizarGrafico(evolucion);
+        renderizarCompletados(clasificacion);
 
       } catch (e) {
         console.error(e);
@@ -324,6 +328,52 @@
           </div>
         `;
       }).join('');
+    }
+
+    async function renderizarCompletados(clasificacion) {
+      const el = document.getElementById('completados-section');
+      if (!el) return;
+      try {
+        const grupo = localStorage.getItem('mundial_user_grupo');
+        const [todosPartidos, todasPreds] = await Promise.all([
+          db.getTodosPartidos(),
+          db.getTodasPredicciones(grupo)
+        ]);
+        const totalPartidos = todosPartidos.length;
+        // Contar predicciones por participante
+        const conteo = {};
+        todasPreds.forEach(p => {
+          if (!conteo[p.participante_id]) conteo[p.participante_id] = 0;
+          conteo[p.participante_id]++;
+        });
+        const completados = clasificacion.filter(p => (conteo[p.id] || 0) >= totalPartidos);
+        const pendientes  = clasificacion.filter(p => (conteo[p.id] || 0) < totalPartidos);
+
+        if (clasificacion.length === 0) return;
+
+        el.innerHTML = `
+          <div class="card" style="margin-bottom:4px;">
+            <p class="card-title" style="margin-bottom:12px;">Predicciones completadas</p>
+            ${completados.length === 0
+              ? '<p style="color:var(--text-muted);font-size:0.85rem;">Nadie ha completado todas las predicciones aún.</p>'
+              : completados.map(p => `
+                  <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green);"></div>
+                    <span style="font-weight:700;font-size:0.9rem;color:var(--text);">${escapeHtml(p.nombre)}</span>
+                    <span style="margin-left:auto;font-size:0.72rem;color:var(--green);font-weight:700;">✓ Completo</span>
+                  </div>`).join('')
+            }
+            ${pendientes.length > 0 ? `
+              <p style="font-size:0.72rem;color:var(--text-muted);margin-top:10px;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Pendientes</p>
+              ${pendientes.map(p => `
+                <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">
+                  <div style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;"></div>
+                  <span style="font-size:0.88rem;color:var(--text-muted);">${escapeHtml(p.nombre)}</span>
+                  <span style="margin-left:auto;font-size:0.72rem;color:var(--text-muted);">${conteo[p.id] || 0} / ${totalPartidos}</span>
+                </div>`).join('')}
+            ` : ''}
+          </div>`;
+      } catch(e) { console.warn('Error completados:', e); }
     }
 
     function renderizarGrafico(evolucion) {

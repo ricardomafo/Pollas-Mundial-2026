@@ -201,15 +201,12 @@ window.db = {
   /**
    * Obtiene todas las predicciones con info de participante y partido
    */
-  async getTodasPredicciones() {
-    const { data, error } = await supabaseClient
+  async getTodasPredicciones(grupo) {
+    let query = supabaseClient
       .from('predicciones')
-      .select(`
-        *,
-        participantes (id, nombre),
-        partidos (*)
-      `);
-
+      .select('*, participantes!inner(id, nombre, grupo), partidos(*)');
+    if (grupo) query = query.eq('participantes.grupo', grupo);
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   },

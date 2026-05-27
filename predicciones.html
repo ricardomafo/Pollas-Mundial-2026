@@ -30,7 +30,7 @@
         <span style="font-size:1.3rem;flex-shrink:0;">🔒</span>
         <div>
           <p style="font-weight:800;color:#ff4444;font-size:0.88rem;margin:0 0 2px;">Plazo cerrado</p>
-          <p style="color:var(--text-muted);font-size:0.78rem;margin:0;">El plazo para registrar predicciones terminó el 31 de mayo. Ya no se pueden modificar.</p>
+          <p style="color:var(--text-muted);font-size:0.78rem;margin:0;">El plazo para registrar predicciones terminó el 10 de junio a las 11:59pm. Ya no se pueden modificar.</p>
         </div>
       </div>
     </div>
@@ -101,8 +101,8 @@
         document.getElementById('header-nombre').textContent = part.nombre;
       } catch(e) { window.location.href = 'index.html'; return; }
 
-      // Verificar fecha límite: 31 de mayo de 2026
-      const DEADLINE = new Date('2026-06-01T00:00:00');
+      // Verificar fecha límite: 10 de junio de 2026 a las 11:59pm
+      const DEADLINE = new Date('2026-06-10T23:59:00');
       const plazoVencido = new Date() >= DEADLINE;
       if (plazoVencido) {
         document.getElementById('aviso-deadline').classList.remove('hidden');
@@ -482,7 +482,7 @@
 
       // Para BX: plazo individual por partido (10 min antes)
       function partidoAbierto(p) {
-        if (!window._esBX) return new Date() < new Date('2026-06-01T00:00:00');
+        if (!window._esBX) return new Date() < new Date('2026-06-10T23:59:00');
         if (!p.fecha || !p.hora) return true;
         const inicio = new Date(p.fecha + 'T' + p.hora);
         return new Date() < new Date(inicio.getTime() - 10 * 60 * 1000);
@@ -555,8 +555,8 @@
     // =====================================================
     async function guardarTodo() {
       if (!usuarioActual) return;
-      if (!window._esBX && new Date() >= new Date('2026-06-01T00:00:00')) {
-        mostrarToast('🔒 El plazo para subir predicciones terminó el 31 de mayo');
+      if (!window._esBX && new Date() >= new Date('2026-06-10T23:59:00')) {
+        mostrarToast('🔒 El plazo para subir predicciones terminó el 10 de junio');
         return;
       }
       const btn = document.getElementById('btn-guardar');
