@@ -748,21 +748,28 @@
         const glPred = parseInt(pred.goles_local), gvPred = parseInt(pred.goles_visitante);
         if (!isNaN(glPred) && !isNaN(gvPred) && glPred === gvPred) {
           const pp = (window.penaltyPicks || {})[partido.id];
-          const btnBase = 'flex:1;padding:6px 4px;border-radius:8px;font-size:0.76rem;font-weight:700;cursor:pointer;transition:all 0.15s;';
-          const activeStyle  = 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);';
-          const inactiveStyle = 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
-          const btnLocalStyle  = pp === 'local'  ? activeStyle : inactiveStyle;
-          const btnVisitaStyle = pp === 'visita' ? activeStyle : inactiveStyle;
-          const btnOkStyle = `background:rgba(0,200,83,0.15);border:1px solid rgba(0,200,83,0.4);color:var(--green);border-radius:6px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;opacity:0.3;pointer-events:none;transition:opacity 0.2s;flex-shrink:0;`;
-          penaltisHtml = `
-            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-              <p style="font-size:0.68rem;color:var(--text-muted);text-align:center;margin:0 0 7px;letter-spacing:.3px;">🥅 Empate ${glPred}–${gvPred} · ¿quién gana los penaltis?</p>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <button id="pp-local-${partido.id}"  style="${btnBase}${btnLocalStyle}"  onclick="penaltyPreview(${partido.id},'local')">${getFlag(localNombre)} ${escH(localNombre)}</button>
-                <button id="pp-visita-${partido.id}" style="${btnBase}${btnVisitaStyle}" onclick="penaltyPreview(${partido.id},'visita')">${getFlag(visitaNombre)} ${escH(visitaNombre)}</button>
-                <button id="pp-ok-${partido.id}" style="${btnOkStyle}" onclick="confirmarPenalty(${partido.id})">✓ OK</button>
-              </div>
-            </div>`;
+          if (pp) {
+            // Ya confirmado: mostrar bloqueado
+            const ganadorNombre = pp === 'local' ? localNombre : visitaNombre;
+            penaltisHtml = `
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px;">
+                <span style="font-size:0.68rem;color:var(--text-muted);">🥅 Penaltis:</span>
+                <span style="font-size:0.68rem;background:rgba(0,200,83,0.15);color:var(--green);border-radius:4px;padding:1px 6px;font-weight:700;">✓</span>
+                <span style="font-size:0.82rem;font-weight:700;">${getFlag(ganadorNombre)} ${escH(ganadorNombre)}</span>
+              </div>`;
+          } else {
+            const btnBase = 'flex:1;padding:6px 4px;border-radius:8px;font-size:0.76rem;font-weight:700;cursor:pointer;transition:all 0.15s;background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
+            const btnOkStyle = `background:rgba(0,200,83,0.15);border:1px solid rgba(0,200,83,0.4);color:var(--green);border-radius:6px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;opacity:0.3;pointer-events:none;transition:opacity 0.2s;flex-shrink:0;`;
+            penaltisHtml = `
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+                <p style="font-size:0.68rem;color:var(--text-muted);text-align:center;margin:0 0 7px;letter-spacing:.3px;">🥅 Empate ${glPred}–${gvPred} · ¿quién gana los penaltis?</p>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <button id="pp-local-${partido.id}"  style="${btnBase}" onclick="penaltyPreview(${partido.id},'local')">${getFlag(localNombre)} ${escH(localNombre)}</button>
+                  <button id="pp-visita-${partido.id}" style="${btnBase}" onclick="penaltyPreview(${partido.id},'visita')">${getFlag(visitaNombre)} ${escH(visitaNombre)}</button>
+                  <button id="pp-ok-${partido.id}" style="${btnOkStyle}" onclick="confirmarPenalty(${partido.id})">✓ OK</button>
+                </div>
+              </div>`;
+          }
         }
       }
 
