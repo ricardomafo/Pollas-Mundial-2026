@@ -134,7 +134,10 @@
         <div>
           <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 2px;">¡Hola de nuevo!</p>
           <h2 id="nombre-bienvenida" style="font-size: 1.5rem; font-weight: 900; margin: 0; color: var(--text);"></h2>
-          <p style="color: var(--green); font-size: 0.75rem; margin: 2px 0 0;">Tus predicciones te esperan ⚽</p>
+          <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+            <span style="font-size:0.68rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:rgba(255,255,255,0.35);">Grupo</span>
+            <span id="badge-grupo" style="font-size:0.72rem; font-weight:800; background:rgba(201,168,76,0.12); color:var(--gold); border:1px solid rgba(201,168,76,0.3); border-radius:6px; padding:2px 8px; letter-spacing:1px;"></span>
+          </div>
         </div>
       </div>
 
@@ -297,6 +300,8 @@
       document.body.style.paddingBottom = 'calc(80px + env(safe-area-inset-bottom, 0px))';
       document.getElementById('nombre-bienvenida').textContent = participante.nombre;
       document.getElementById('avatar-grande').textContent = participante.nombre.charAt(0).toUpperCase();
+      const bg = document.getElementById('badge-grupo');
+      if (bg) bg.textContent = participante.grupo || '';
 
       // Mostrar botón admin si corresponde
       if (participante.es_admin) {
