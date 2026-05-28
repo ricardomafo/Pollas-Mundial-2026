@@ -238,15 +238,23 @@
       status.textContent = 'Cargando datos...';
 
       try {
-        const [partidos, participantes] = await Promise.all([
-          db.getTodosPartidos(),
-          db.getTodosParticipantes(adminGrupo)
-        ]);
-        const partIds = participantes.map(p => p.id);
-        const { data: preds } = await supabaseClient
-          .from('predicciones')
-          .select('participante_id, partido_id, goles_local, goles_visitante')
-          .in('participante_id', partIds);
+        // Traer participantes del grupo
+        const { data: participantes } = await supabaseClient
+          .from('participantes').select('id, nombre, grupo')
+          .eq('grupo', adminGrupo).order('nombre');
+
+        // Traer todos los partidos
+        const { data: partidos } = await supabaseClient
+          .from('partidos').select('id, orden, fase, equipo_local, equipo_visitante, fecha, hora')
+          .order('orden', { ascending: true });
+
+        // Traer predicciones de esos participantes
+        const partIds = (participantes || []).map(p => p.id);
+        const { data: preds } = partIds.length > 0
+          ? await supabaseClient.from('predicciones')
+              .select('participante_id, partido_id, goles_local, goles_visitante')
+              .in('participante_id', partIds)
+          : { data: [] };
 
         // Ordenar partidos por fase y orden
         partidos.sort((a,b) => (a.orden||0)-(b.orden||0));
