@@ -146,50 +146,52 @@ window.bracket = {
 
   // =====================================================
   // ESTRUCTURA DEL BRACKET (16avos de final)
-  // Grupos A-F → lado izquierdo, G-L → lado derecho
+  // Fuente oficial: FIFA World Cup 2026 match schedule
+  // M73-M88 = Round of 32, M89-M96 = R16, M97-M100 = QF, M101-M102 = SF
   // =====================================================
   BRACKET_R32: [
-    // Lado izquierdo
-    { id: 1,  label: 'R32-1',  home_slot: '1A', away_slot: '2B', r16: 'R16-1', orden: 101 },
-    { id: 2,  label: 'R32-2',  home_slot: '1C', away_slot: '3rd-1', r16: 'R16-1', orden: 102 },
-    { id: 3,  label: 'R32-3',  home_slot: '2A', away_slot: '3rd-2', r16: 'R16-2', orden: 103 },
-    { id: 4,  label: 'R32-4',  home_slot: '2C', away_slot: '1B',  r16: 'R16-2', orden: 104 },
-    { id: 5,  label: 'R32-5',  home_slot: '1D', away_slot: '2E',  r16: 'R16-3', orden: 105 },
-    { id: 6,  label: 'R32-6',  home_slot: '1F', away_slot: '3rd-3', r16: 'R16-3', orden: 106 },
-    { id: 7,  label: 'R32-7',  home_slot: '2D', away_slot: '3rd-4', r16: 'R16-4', orden: 107 },
-    { id: 8,  label: 'R32-8',  home_slot: '2F', away_slot: '1E',  r16: 'R16-4', orden: 108 },
-    // Lado derecho
-    { id: 9,  label: 'R32-9',  home_slot: '1G', away_slot: '2H',  r16: 'R16-5', orden: 109 },
-    { id: 10, label: 'R32-10', home_slot: '1I', away_slot: '3rd-5', r16: 'R16-5', orden: 110 },
-    { id: 11, label: 'R32-11', home_slot: '2G', away_slot: '3rd-6', r16: 'R16-6', orden: 111 },
-    { id: 12, label: 'R32-12', home_slot: '2I', away_slot: '1H',  r16: 'R16-6', orden: 112 },
-    { id: 13, label: 'R32-13', home_slot: '1J', away_slot: '2K',  r16: 'R16-7', orden: 113 },
-    { id: 14, label: 'R32-14', home_slot: '1L', away_slot: '3rd-7', r16: 'R16-7', orden: 114 },
-    { id: 15, label: 'R32-15', home_slot: '2J', away_slot: '3rd-8', r16: 'R16-8', orden: 115 },
-    { id: 16, label: 'R32-16', home_slot: '2L', away_slot: '1K',  r16: 'R16-8', orden: 116 },
+    { id: 1,  label: 'R32-1',  home_slot: '2A',  away_slot: '2B',    r16: 'R16-2', orden: 101 }, // M73
+    { id: 2,  label: 'R32-2',  home_slot: '1E',  away_slot: '3rd-1', r16: 'R16-1', orden: 102 }, // M74
+    { id: 3,  label: 'R32-3',  home_slot: '1F',  away_slot: '2C',    r16: 'R16-2', orden: 103 }, // M75
+    { id: 4,  label: 'R32-4',  home_slot: '1C',  away_slot: '2F',    r16: 'R16-5', orden: 104 }, // M76
+    { id: 5,  label: 'R32-5',  home_slot: '1I',  away_slot: '3rd-2', r16: 'R16-1', orden: 105 }, // M77
+    { id: 6,  label: 'R32-6',  home_slot: '2E',  away_slot: '2I',    r16: 'R16-5', orden: 106 }, // M78
+    { id: 7,  label: 'R32-7',  home_slot: '1A',  away_slot: '3rd-3', r16: 'R16-6', orden: 107 }, // M79
+    { id: 8,  label: 'R32-8',  home_slot: '1L',  away_slot: '3rd-4', r16: 'R16-6', orden: 108 }, // M80
+    { id: 9,  label: 'R32-9',  home_slot: '1D',  away_slot: '3rd-5', r16: 'R16-4', orden: 109 }, // M81
+    { id: 10, label: 'R32-10', home_slot: '1G',  away_slot: '3rd-6', r16: 'R16-4', orden: 110 }, // M82
+    { id: 11, label: 'R32-11', home_slot: '2K',  away_slot: '2L',    r16: 'R16-3', orden: 111 }, // M83
+    { id: 12, label: 'R32-12', home_slot: '1H',  away_slot: '2J',    r16: 'R16-3', orden: 112 }, // M84
+    { id: 13, label: 'R32-13', home_slot: '1B',  away_slot: '3rd-7', r16: 'R16-8', orden: 113 }, // M85
+    { id: 14, label: 'R32-14', home_slot: '1J',  away_slot: '2H',    r16: 'R16-7', orden: 114 }, // M86
+    { id: 15, label: 'R32-15', home_slot: '1K',  away_slot: '3rd-8', r16: 'R16-8', orden: 115 }, // M87
+    { id: 16, label: 'R32-16', home_slot: '2D',  away_slot: '2G',    r16: 'R16-7', orden: 116 }, // M88
   ],
 
+  // M89: W74 vs W77 | M90: W73 vs W75 | M91: W83 vs W84 | M92: W81 vs W82
+  // M93: W76 vs W78 | M94: W79 vs W80 | M95: W86 vs W88 | M96: W85 vs W87
   R16_ESTRUCTURA: [
-    { label: 'R16-1', from: ['R32-1','R32-2'],   qf: 'QF-1', orden: 201 },
-    { label: 'R16-2', from: ['R32-3','R32-4'],   qf: 'QF-1', orden: 202 },
-    { label: 'R16-3', from: ['R32-5','R32-6'],   qf: 'QF-2', orden: 203 },
-    { label: 'R16-4', from: ['R32-7','R32-8'],   qf: 'QF-2', orden: 204 },
-    { label: 'R16-5', from: ['R32-9','R32-10'],  qf: 'QF-3', orden: 205 },
-    { label: 'R16-6', from: ['R32-11','R32-12'], qf: 'QF-3', orden: 206 },
-    { label: 'R16-7', from: ['R32-13','R32-14'], qf: 'QF-4', orden: 207 },
-    { label: 'R16-8', from: ['R32-15','R32-16'], qf: 'QF-4', orden: 208 },
+    { label: 'R16-1', from: ['R32-2', 'R32-5'],  qf: 'QF-1', orden: 201 }, // M89
+    { label: 'R16-2', from: ['R32-1', 'R32-3'],  qf: 'QF-1', orden: 202 }, // M90
+    { label: 'R16-3', from: ['R32-11','R32-12'], qf: 'QF-2', orden: 203 }, // M91
+    { label: 'R16-4', from: ['R32-9', 'R32-10'], qf: 'QF-2', orden: 204 }, // M92
+    { label: 'R16-5', from: ['R32-4', 'R32-6'],  qf: 'QF-3', orden: 205 }, // M93
+    { label: 'R16-6', from: ['R32-7', 'R32-8'],  qf: 'QF-3', orden: 206 }, // M94
+    { label: 'R16-7', from: ['R32-14','R32-16'], qf: 'QF-4', orden: 207 }, // M95
+    { label: 'R16-8', from: ['R32-13','R32-15'], qf: 'QF-4', orden: 208 }, // M96
   ],
 
+  // M97: W89 vs W90 | M98: W91 vs W92 | M99: W93 vs W94 | M100: W95 vs W96
   QF_ESTRUCTURA: [
-    { label: 'QF-1', from: ['R16-1','R16-2'], sf: 'SF-1', orden: 301 },
-    { label: 'QF-2', from: ['R16-3','R16-4'], sf: 'SF-1', orden: 302 },
-    { label: 'QF-3', from: ['R16-5','R16-6'], sf: 'SF-2', orden: 303 },
-    { label: 'QF-4', from: ['R16-7','R16-8'], sf: 'SF-2', orden: 304 },
+    { label: 'QF-1', from: ['R16-1','R16-2'], sf: 'SF-1', orden: 301 }, // M97
+    { label: 'QF-2', from: ['R16-3','R16-4'], sf: 'SF-1', orden: 302 }, // M98
+    { label: 'QF-3', from: ['R16-5','R16-6'], sf: 'SF-2', orden: 303 }, // M99
+    { label: 'QF-4', from: ['R16-7','R16-8'], sf: 'SF-2', orden: 304 }, // M100
   ],
 
   SF_ESTRUCTURA: [
-    { label: 'SF-1', from: ['QF-1','QF-2'], orden: 401 },
-    { label: 'SF-2', from: ['QF-3','QF-4'], orden: 402 },
+    { label: 'SF-1', from: ['QF-1','QF-2'], orden: 401 }, // M101
+    { label: 'SF-2', from: ['QF-3','QF-4'], orden: 402 }, // M102
   ],
 
   // =====================================================
