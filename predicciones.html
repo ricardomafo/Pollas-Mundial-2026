@@ -83,8 +83,10 @@
     let misPredicciones = {}; // { partido_id: { goles_local, goles_visitante } }
     let faseActual = 'grupos';
     let grupoActual = null;
-    window.fairplayPicks = JSON.parse(localStorage.getItem('mundial_fairplay') || '{}');
+    window.fairplayPicks  = JSON.parse(localStorage.getItem('mundial_fairplay') || '{}');
     window._fairplayInfo  = {}; // { slotKey: { candidates:[a,b], picked:a, pairedSlot:'2X' } }
+    window._todosTerceros = []; // lista ordenada de 3ros para la tabla
+    window._viendoTerceros = false;
 
     // =====================================================
     // INIT
@@ -360,6 +362,9 @@
       slotMap['Final_home']      = slotMap['SF-1_win']  || '[Ganador SF-1]';
       slotMap['Final_away']      = slotMap['SF-2_win']  || '[Ganador SF-2]';
 
+      // Exponer lista de terceros para la tabla de mejores 3°
+      window._todosTerceros = todosTerceros;
+
       return slotMap;
     }
 
@@ -408,21 +413,93 @@
         return;
       }
 
-      const grupoInicial = (grupoActual && grupos.includes(grupoActual)) ? grupoActual : grupos[0];
-      let html = `<div id="subtabs-g" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:14px;">`;
+      const grupoInicial = (!window._viendoTerceros && grupoActual && grupos.includes(grupoActual)) ? grupoActual : grupos[0];
+      let html = `<div id="subtabs-g" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px;">`;
       grupos.forEach(g => {
-        html += `<button class="tab ${g===grupoInicial?'active':''}" onclick="cambiarSubgrupo(this,'${g}')" style="padding:8px 4px; font-size:0.78rem; text-align:center; width:100%;">Grupo ${g}</button>`;
+        const activo = !window._viendoTerceros && g === grupoInicial;
+        html += `<button class="tab ${activo?'active':''}" onclick="cambiarSubgrupo(this,'${g}')" style="padding:8px 4px; font-size:0.78rem; text-align:center; width:100%;">Grupo ${g}</button>`;
       });
-      html += `</div><div id="contenido-grupo"></div>`;
+      html += `</div>`;
+      html += `<button id="btn-terceros" onclick="verMejoresTerceros()" class="tab ${window._viendoTerceros?'active':''}" style="width:100%;padding:7px;font-size:0.78rem;margin-bottom:12px;text-align:center;background:rgba(255,214,0,0.06);border-color:rgba(255,214,0,0.25);">📊 Tabla mejores 3°</button>`;
+      html += `<div id="contenido-grupo"></div>`;
       container.innerHTML = html;
-      cambiarSubgrupoDirecto(grupoInicial);
+
+      if (window._viendoTerceros) {
+        renderMejoresTerceros(document.getElementById('contenido-grupo'));
+      } else {
+        cambiarSubgrupoDirecto(grupoInicial);
+      }
     }
 
     function cambiarSubgrupo(btn, grupo) {
+      window._viendoTerceros = false;
       document.querySelectorAll('#subtabs-g .tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      const btnT = document.getElementById('btn-terceros');
+      if (btnT) btnT.classList.remove('active');
       grupoActual = grupo;
       cambiarSubgrupoDirecto(grupo);
+    }
+
+    function verMejoresTerceros() {
+      window._viendoTerceros = true;
+      document.querySelectorAll('#subtabs-g .tab').forEach(b => b.classList.remove('active'));
+      const btnT = document.getElementById('btn-terceros');
+      if (btnT) btnT.classList.add('active');
+      const c = document.getElementById('contenido-grupo');
+      if (c) renderMejoresTerceros(c);
+    }
+
+    function renderMejoresTerceros(container) {
+      // Recalcular para tener datos frescos
+      calcularSlotMap();
+      const terceros = window._todosTerceros || [];
+
+      if (terceros.length === 0) {
+        container.innerHTML = `<div style="padding:24px 0; text-align:center; color:var(--text-muted); font-size:0.85rem;">Ingresa predicciones de grupos para ver la tabla.</div>`;
+        return;
+      }
+
+      const hasFP = terceros.some(t => t.fairplayTie3);
+      let html = `<p style="color:var(--text-muted);font-size:0.76rem;margin:0 0 10px;">Clasifican los 8 mejores. Basado en tus predicciones actuales.</p>`;
+
+      html += `<div style="background:var(--surface2);border-radius:12px;overflow:hidden;border:1px solid var(--border);">`;
+      // Cabecera
+      html += `<div style="display:grid;grid-template-columns:28px 1fr 52px 38px 38px 38px;gap:0;padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.65rem;color:var(--text-muted);font-weight:700;letter-spacing:.5px;text-transform:uppercase;">
+        <span>#</span><span>Equipo</span><span>Grupo</span>
+        <span style="text-align:center;">Pts</span><span style="text-align:center;">DG</span><span style="text-align:center;">GF</span>
+      </div>`;
+
+      // Separador entre clasificados y no clasificados
+      const n = Math.min(terceros.length, 12);
+      for (let i = 0; i < n; i++) {
+        const t = terceros[i];
+        const clasifica = i < 8;
+        const esFP = t.fairplayTie3;
+        const borderBottom = i < n - 1 ? '1px solid var(--border)' : 'none';
+        // Línea de corte después del 8°
+        const lineaCorte = (i === 8) ? 'border-top:2px dashed rgba(255,68,68,0.4);' : '';
+
+        html += `<div style="display:grid;grid-template-columns:28px 1fr 52px 38px 38px 38px;gap:0;padding:9px 12px;border-bottom:${borderBottom};${lineaCorte}${!clasifica?'opacity:0.4':''}${i===7&&esFP?';background:rgba(255,214,0,0.05)':''}">
+          <span style="font-size:0.82rem;font-weight:800;color:${clasifica?'var(--gold)':'var(--text-dim)'};">${i+1}</span>
+          <span style="font-size:0.82rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px;min-width:0;">
+            ${getFlag(t.nombre)}&nbsp;${escH(t.nombre)}${esFP ? `<span style="font-size:0.58rem;background:rgba(255,214,0,0.2);color:var(--gold);padding:1px 4px;border-radius:3px;flex-shrink:0;">⚖️</span>` : ''}
+          </span>
+          <span style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;">Grp ${t.grupoOrigen || ''}</span>
+          <span style="font-size:0.88rem;font-weight:800;color:${clasifica?'var(--text)':'var(--text-dim)'};text-align:center;">${t.pts}</span>
+          <span style="font-size:0.82rem;color:${clasifica?'var(--text)':'var(--text-dim)'};text-align:center;">${t.dg >= 0 ? '+' : ''}${t.dg}</span>
+          <span style="font-size:0.82rem;color:${clasifica?'var(--text)':'var(--text-dim)'};text-align:center;">${t.gf}</span>
+        </div>`;
+      }
+      html += `</div>`;
+
+      if (hasFP) {
+        html += `<div style="margin-top:10px;background:rgba(255,214,0,0.07);border:1px solid rgba(255,214,0,0.25);border-radius:10px;padding:10px 14px;font-size:0.76rem;color:var(--text-muted);">
+          <strong style="color:var(--gold);">⚖️ Empate por fair play</strong> — Equipos marcados están empatados en todos los criterios. Ve a <strong>16avos</strong> para elegir cuáles crees que clasifican.
+        </div>`;
+      }
+
+      container.innerHTML = html;
     }
 
     function cambiarSubgrupoDirecto(grupo) {
