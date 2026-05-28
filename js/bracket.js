@@ -133,6 +133,8 @@ window.bracket = {
     for (const [grupo, tabla] of Object.entries(clasificacionesPorGrupo)) {
       if (tabla.length >= 3) terceros.push({ ...tabla[2], grupo });
     }
+    // Criterios FIFA: pts → diferencia de goles → goles a favor
+    // No aplica enfrentamientos directos (los terceros son de grupos distintos)
     terceros.sort((a, b) => {
       if (b.pts !== a.pts) return b.pts - a.pts;
       if (b.dg  !== a.dg)  return b.dg  - a.dg;

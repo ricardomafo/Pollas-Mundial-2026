@@ -198,11 +198,18 @@
           clasificaciones[grupo] = bracket.calcularClasificacionGrupo(eqs, ps);
         }
       }
-      const mejoresTerceros = bracket.getMejoresTerceros(clasificaciones);
+      // ── Posición 1°, 2° y 3° por grupo con criterios FIFA ──────────────
+      const tercerosPorGrupo = {};
 
       for (const [grupo, tabla] of Object.entries(clasificaciones)) {
-        // Posición 1 y 2: verificar empate por fairplay
-        const fp01 = tabla[0] && tabla[1] && tabla[0].fairplayTie && tabla[1].fairplayTie;
+        if (!tabla || !tabla[0]) continue;
+
+        // ¿Hay empate fairplay entre posiciones consecutivas?
+        const fp01 = !!tabla[0]?.fairplayTie && !!tabla[1]?.fairplayTie;
+        const fp12 = !!tabla[1]?.fairplayTie && !!tabla[2]?.fairplayTie;
+        const fp012 = fp01 && fp12; // los 3 primeros empatados en todo
+
+        // — Asignar 1° y 2° —
         if (fp01) {
           const slotA = `1${grupo}`, slotB = `2${grupo}`;
           const candidates = [tabla[0].nombre, tabla[1].nombre];
@@ -216,20 +223,69 @@
           if (tabla[0]) slotMap[`1${grupo}`] = tabla[0].nombre;
           if (tabla[1]) slotMap[`2${grupo}`] = tabla[1].nombre;
         }
-        // Posición 2 y 3 (afecta mejores terceros): también verificar fairplay
-        const fp12 = tabla[1] && tabla[2] && tabla[1].fairplayTie && tabla[2].fairplayTie;
-        if (fp12 && !fp01) {
+
+        // — Determinar 3° para el pool de mejores terceros —
+        if (fp012) {
+          // Los 3 primeros están todos empatados: 3° es quien no fue elegido para 1° ni 2°
+          const p1 = slotMap[`1${grupo}`], p2 = slotMap[`2${grupo}`];
+          const restantes = [tabla[0].nombre, tabla[1].nombre, tabla[2].nombre].filter(n => n !== p1 && n !== p2);
+          tercerosPorGrupo[grupo] = restantes[0] || tabla[2].nombre;
+        } else if (fp12 && !fp01) {
+          // Empate entre 2° y 3°: el 3° es quien no fue elegido como 2°
           const slotA = `2${grupo}`, slotB = `3${grupo}`;
           const candidates = [tabla[1].nombre, tabla[2].nombre];
           const pickA = (window.fairplayPicks[slotA] && candidates.includes(window.fairplayPicks[slotA]))
             ? window.fairplayPicks[slotA] : tabla[1].nombre;
           const pickB = candidates.find(c => c !== pickA);
-          slotMap[slotA] = pickA;
+          // Sobrescribir 2° si se desplazó por fairplay
+          slotMap[`2${grupo}`] = pickA;
           window._fairplayInfo[slotA] = { candidates, picked: pickA, pairedSlot: slotB };
           window._fairplayInfo[slotB] = { candidates, picked: pickB, pairedSlot: slotA };
+          tercerosPorGrupo[grupo] = pickB;
+        } else {
+          if (tabla[2]) tercerosPorGrupo[grupo] = tabla[2].nombre;
         }
       }
-      mejoresTerceros.forEach((t, i) => { slotMap[`3rd-${i+1}`] = t.nombre; });
+
+      // ── Mejores 8 terceros con criterios FIFA y fairplay ─────────────
+      const todosTerceros = [];
+      for (const [grupo, nombre] of Object.entries(tercerosPorGrupo)) {
+        if (!nombre) continue;
+        const eq = (clasificaciones[grupo] || []).find(t => t.nombre === nombre);
+        if (eq) todosTerceros.push({ ...eq, grupoOrigen: grupo });
+      }
+
+      // Criterios: pts → diferencia de goles → goles a favor
+      // (No aplica enfrentamientos directos entre terceros porque son de grupos distintos)
+      todosTerceros.sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        if (b.dg  !== a.dg)  return b.dg  - a.dg;
+        if (b.gf  !== a.gf)  return b.gf  - a.gf;
+        return a.nombre.localeCompare(b.nombre);
+      });
+
+      // Marcar empates fairplay entre terceros (toda cadena continua de iguales)
+      for (let i = 0; i < todosTerceros.length - 1; i++) {
+        const a = todosTerceros[i], b = todosTerceros[i+1];
+        if (a.pts === b.pts && a.dg === b.dg && a.gf === b.gf) {
+          a.fairplayTie3 = true; b.fairplayTie3 = true;
+        }
+      }
+
+      // Candidatos para slots 3rd-X con fairplay: todos los terceros empatados
+      const cands3rd = todosTerceros.filter(t => t.fairplayTie3).map(t => t.nombre);
+
+      todosTerceros.slice(0, 8).forEach((t, i) => {
+        const slot = `3rd-${i+1}`;
+        if (t.fairplayTie3 && cands3rd.length > 1) {
+          const pick = (window.fairplayPicks[slot] && cands3rd.includes(window.fairplayPicks[slot]))
+            ? window.fairplayPicks[slot] : t.nombre;
+          slotMap[slot] = pick;
+          window._fairplayInfo[slot] = { candidates: cands3rd, picked: pick };
+        } else {
+          slotMap[slot] = t.nombre;
+        }
+      });
 
       // — Paso 2: resolver R32 (16avos) —
       bracket.BRACKET_R32.forEach(m => {
