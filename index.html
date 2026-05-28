@@ -369,9 +369,10 @@
       const titulo = document.getElementById('partidos-hoy-titulo');
       const userGrupo = localStorage.getItem('mundial_user_grupo');
       try {
-        const [partidos, predicciones] = await Promise.all([
-          db.getTodosPartidos(),
-          db.getPrediccionesPorParticipante(usuarioId),
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+        const [partidos, predicciones] = await Promise.race([
+          Promise.all([db.getTodosPartidos(), db.getPrediccionesPorParticipante(usuarioId)]),
+          timeout
         ]);
 
         const misPreds = {};
@@ -532,7 +533,10 @@
 
       } catch(e) {
         console.error(e);
-        container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Error al cargar partidos</p>`;
+        const msg = e.message === 'timeout'
+          ? 'No se pudieron cargar los partidos. Intenta de nuevo más tarde.'
+          : 'Error al cargar partidos';
+        container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:12px 0;">${msg}</p>`;
       }
     }
 
