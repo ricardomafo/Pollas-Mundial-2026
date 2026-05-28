@@ -110,7 +110,17 @@
     }
 
     async function cargarListas() {
-      await Promise.all([cargarPendientes(), cargarAprobados()]);
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Sin respuesta de Supabase. ¿Está el proyecto activo?')), 8000)
+      );
+      try {
+        await Promise.race([Promise.all([cargarPendientes(), cargarAprobados()]), timeout]);
+      } catch(e) {
+        document.getElementById('lista-pendientes').innerHTML =
+          `<p style="color:#ff4444;font-size:0.85rem;">⚠️ ${e.message}</p>`;
+        document.getElementById('lista-aprobados').innerHTML =
+          `<p style="color:#ff4444;font-size:0.85rem;">⚠️ ${e.message}</p>`;
+      }
     }
 
     async function cargarPendientes() {
