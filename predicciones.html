@@ -83,6 +83,8 @@
     let misPredicciones = {}; // { partido_id: { goles_local, goles_visitante } }
     let faseActual = 'grupos';
     let grupoActual = null;
+    window.fairplayPicks = JSON.parse(localStorage.getItem('mundial_fairplay') || '{}');
+    window._fairplayInfo  = {}; // { slotKey: { candidates:[a,b], picked:a, pairedSlot:'2X' } }
 
     // =====================================================
     // INIT
@@ -172,6 +174,7 @@
     // =====================================================
     function calcularSlotMap() {
       const slotMap = {};
+      window._fairplayInfo = {}; // resetear en cada recálculo
 
       // — Paso 1: simular fase de grupos con predicciones del usuario —
       const gruposEquipos = {};
@@ -190,7 +193,6 @@
             return p;
           });
 
-        // Solo calcular clasificación si hay al menos un partido con predicción o resultado real
         const tieneData = ps.some(p => p.jugado);
         if (tieneData) {
           clasificaciones[grupo] = bracket.calcularClasificacionGrupo(eqs, ps);
@@ -199,8 +201,33 @@
       const mejoresTerceros = bracket.getMejoresTerceros(clasificaciones);
 
       for (const [grupo, tabla] of Object.entries(clasificaciones)) {
-        if (tabla[0]) slotMap[`1${grupo}`] = tabla[0].nombre;
-        if (tabla[1]) slotMap[`2${grupo}`] = tabla[1].nombre;
+        // Posición 1 y 2: verificar empate por fairplay
+        const fp01 = tabla[0] && tabla[1] && tabla[0].fairplayTie && tabla[1].fairplayTie;
+        if (fp01) {
+          const slotA = `1${grupo}`, slotB = `2${grupo}`;
+          const candidates = [tabla[0].nombre, tabla[1].nombre];
+          const pickA = (window.fairplayPicks[slotA] && candidates.includes(window.fairplayPicks[slotA]))
+            ? window.fairplayPicks[slotA] : tabla[0].nombre;
+          const pickB = candidates.find(c => c !== pickA);
+          slotMap[slotA] = pickA; slotMap[slotB] = pickB;
+          window._fairplayInfo[slotA] = { candidates, picked: pickA, pairedSlot: slotB };
+          window._fairplayInfo[slotB] = { candidates, picked: pickB, pairedSlot: slotA };
+        } else {
+          if (tabla[0]) slotMap[`1${grupo}`] = tabla[0].nombre;
+          if (tabla[1]) slotMap[`2${grupo}`] = tabla[1].nombre;
+        }
+        // Posición 2 y 3 (afecta mejores terceros): también verificar fairplay
+        const fp12 = tabla[1] && tabla[2] && tabla[1].fairplayTie && tabla[2].fairplayTie;
+        if (fp12 && !fp01) {
+          const slotA = `2${grupo}`, slotB = `3${grupo}`;
+          const candidates = [tabla[1].nombre, tabla[2].nombre];
+          const pickA = (window.fairplayPicks[slotA] && candidates.includes(window.fairplayPicks[slotA]))
+            ? window.fairplayPicks[slotA] : tabla[1].nombre;
+          const pickB = candidates.find(c => c !== pickA);
+          slotMap[slotA] = pickA;
+          window._fairplayInfo[slotA] = { candidates, picked: pickA, pairedSlot: slotB };
+          window._fairplayInfo[slotB] = { candidates, picked: pickB, pairedSlot: slotA };
+        }
       }
       mejoresTerceros.forEach((t, i) => { slotMap[`3rd-${i+1}`] = t.nombre; });
 
@@ -374,7 +401,9 @@
           label: m.label,
           local: slotMap[m.label + '_home'] || m.home_slot,
           visita: slotMap[m.label + '_away'] || m.away_slot,
-          r16: m.r16
+          r16: m.r16,
+          home_slot: m.home_slot,
+          away_slot: m.away_slot
         }));
         titulos = { izq: 'Lado Izquierdo', der: 'Lado Derecho' };
       } else if (fase === 'cuartos') {
@@ -404,7 +433,7 @@
           return;
         }
         html += `<div style="margin-bottom:2px;"><span style="font-size:0.65rem; color:var(--text-muted); letter-spacing:1px;">${m.label}</span></div>`;
-        html += renderCardPartido(dbMatch, m.local, m.visita);
+        html += renderCardPartido(dbMatch, m.local, m.visita, m.home_slot, m.away_slot);
       });
 
       container.innerHTML = html;
@@ -473,12 +502,30 @@
     // =====================================================
     // CARD DE PARTIDO (genérica)
     // =====================================================
-    function renderCardPartido(partido, localNombre, visitaNombre) {
+    function renderCardPartido(partido, localNombre, visitaNombre, localSlot, visitaSlot) {
       const pred = misPredicciones[partido.id];
       const jugado = partido.jugado;
       const fL = getFlag(localNombre);
       const fV = getFlag(visitaNombre);
       const esTBD = localNombre === 'Por definir' || localNombre.startsWith('[');
+
+      // Render de nombre de equipo: dropdown si hay empate por fairplay en ese slot
+      function renderSlotNombre(nombre, slot, alinear) {
+        const info = slot && window._fairplayInfo && window._fairplayInfo[slot];
+        if (info) {
+          const selectStyle = 'background:rgba(255,214,0,0.08);border:1px solid rgba(255,214,0,0.45);border-radius:7px;color:var(--gold);font-size:0.75rem;font-weight:700;padding:4px 6px;cursor:pointer;max-width:130px;outline:none;';
+          return `<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:${alinear==='right'?'flex-end':'flex-start'};">
+            <span style="font-size:0.7rem;background:rgba(255,214,0,0.15);color:var(--gold);border-radius:4px;padding:1px 5px;letter-spacing:.5px;">⚖️ Fair play</span>
+            <select style="${selectStyle}" onchange="setFairplayPick('${slot}',this.value)">
+              ${info.candidates.map(c => `<option value="${escH(c)}"${c===nombre?' selected':''}>${getFlag(c)} ${escH(c)}</option>`).join('')}
+            </select>
+          </span>`;
+        }
+        return `${getFlag(nombre)} ${escH(nombre)}`;
+      }
+
+      const localHtml  = renderSlotNombre(localNombre,  localSlot,  'right');
+      const visitaHtml = renderSlotNombre(visitaNombre, visitaSlot, 'left');
 
       // Para BX: plazo individual por partido (10 min antes)
       function partidoAbierto(p) {
@@ -526,9 +573,9 @@
             ${savedHtml}${puntosHtml}
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <div style="flex:1; text-align:right; font-weight:600; font-size:0.85rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fL} ${escH(localNombre)}</div>
+            <div style="flex:1; text-align:right; font-weight:600; font-size:0.85rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${localHtml}</div>
             ${inputsHtml}
-            <div style="flex:1; font-weight:600; font-size:0.85rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fV} ${escH(visitaNombre)}</div>
+            <div style="flex:1; font-weight:600; font-size:0.85rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${visitaHtml}</div>
           </div>
           ${resultadoReal}
         </div>`;
@@ -609,6 +656,22 @@
 
       btn.disabled = false;
       btn.textContent = 'Guardar predicciones';
+    }
+
+    // =====================================================
+    // FAIRPLAY PICKS
+    // =====================================================
+    function setFairplayPick(slotKey, value) {
+      if (!window.fairplayPicks) window.fairplayPicks = {};
+      window.fairplayPicks[slotKey] = value;
+      // Sincronizar el slot emparejado con el otro equipo
+      const info = window._fairplayInfo[slotKey];
+      if (info && info.pairedSlot) {
+        const otro = info.candidates.find(c => c !== value);
+        window.fairplayPicks[info.pairedSlot] = otro;
+      }
+      localStorage.setItem('mundial_fairplay', JSON.stringify(window.fairplayPicks));
+      renderizarPartidos(faseActual);
     }
 
     // =====================================================

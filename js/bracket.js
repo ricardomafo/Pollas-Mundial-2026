@@ -12,31 +12,85 @@ window.bracket = {
   calcularClasificacionGrupo(equiposGrupo, partidosGrupo) {
     const tabla = {};
     equiposGrupo.forEach(e => {
-      tabla[e] = { nombre: e, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0 };
+      tabla[e] = { nombre: e, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0, fairplayTie: false };
     });
 
-    partidosGrupo.filter(p => p.jugado).forEach(p => {
-      const local = p.equipo_local;
-      const visita = p.equipo_visitante;
-      const gl = parseInt(p.goles_local);
-      const gv = parseInt(p.goles_visitante);
+    const jugados = partidosGrupo.filter(p => p.jugado);
+    jugados.forEach(p => {
+      const local = p.equipo_local, visita = p.equipo_visitante;
+      const gl = parseInt(p.goles_local), gv = parseInt(p.goles_visitante);
       if (!tabla[local] || !tabla[visita] || isNaN(gl) || isNaN(gv)) return;
-
       tabla[local].pj++;  tabla[visita].pj++;
       tabla[local].gf += gl;  tabla[local].gc += gv;  tabla[local].dg += (gl - gv);
       tabla[visita].gf += gv; tabla[visita].gc += gl; tabla[visita].dg += (gv - gl);
-
       if (gl > gv)      { tabla[local].pg++;  tabla[local].pts += 3;  tabla[visita].pp++; }
       else if (gl < gv) { tabla[visita].pg++; tabla[visita].pts += 3; tabla[local].pp++;  }
       else              { tabla[local].pe++;   tabla[local].pts++;     tabla[visita].pe++; tabla[visita].pts++; }
     });
 
-    return Object.values(tabla).sort((a, b) => {
+    // Mini-tabla de enfrentamientos directos entre un subconjunto de equipos
+    function miniTabla(subset) {
+      const nombres = new Set(subset.map(e => e.nombre));
+      const m = {};
+      subset.forEach(e => { m[e.nombre] = { pts: 0, dg: 0, gf: 0 }; });
+      jugados.forEach(p => {
+        if (!nombres.has(p.equipo_local) || !nombres.has(p.equipo_visitante)) return;
+        const gl = parseInt(p.goles_local), gv = parseInt(p.goles_visitante);
+        if (isNaN(gl) || isNaN(gv)) return;
+        m[p.equipo_local].gf  += gl; m[p.equipo_local].dg  += (gl - gv);
+        m[p.equipo_visitante].gf += gv; m[p.equipo_visitante].dg += (gv - gl);
+        if (gl > gv)      m[p.equipo_local].pts += 3;
+        else if (gl < gv) m[p.equipo_visitante].pts += 3;
+        else              { m[p.equipo_local].pts++; m[p.equipo_visitante].pts++; }
+      });
+      return m;
+    }
+
+    // Orden primario: pts → dg → gf
+    const arr = Object.values(tabla);
+    arr.sort((a, b) => {
       if (b.pts !== a.pts) return b.pts - a.pts;
       if (b.dg  !== a.dg)  return b.dg  - a.dg;
       if (b.gf  !== a.gf)  return b.gf  - a.gf;
-      return a.nombre.localeCompare(b.nombre);
+      return 0;
     });
+
+    // Para cada grupo de equipos empatados en pts/dg/gf, aplicar enfrentamientos directos
+    const result = [];
+    let i = 0;
+    while (i < arr.length) {
+      let j = i + 1;
+      while (j < arr.length &&
+             arr[j].pts === arr[i].pts &&
+             arr[j].dg  === arr[i].dg  &&
+             arr[j].gf  === arr[i].gf) j++;
+
+      const grupo = arr.slice(i, j);
+      if (grupo.length === 1) {
+        result.push(grupo[0]);
+      } else {
+        const mini = miniTabla(grupo);
+        grupo.sort((a, b) => {
+          const ma = mini[a.nombre], mb = mini[b.nombre];
+          if (mb.pts !== ma.pts) return mb.pts - ma.pts;
+          if (mb.dg  !== ma.dg)  return mb.dg  - ma.dg;
+          if (mb.gf  !== ma.gf)  return mb.gf  - ma.gf;
+          return a.nombre.localeCompare(b.nombre); // orden estable antes de marcar fairplay
+        });
+        // Marcar los que siguen empatados tras enfrentamientos directos (fairplay)
+        for (let k = 0; k < grupo.length - 1; k++) {
+          const ma = mini[grupo[k].nombre], mb = mini[grupo[k+1].nombre];
+          if (ma.pts === mb.pts && ma.dg === mb.dg && ma.gf === mb.gf) {
+            grupo[k].fairplayTie = true;
+            grupo[k+1].fairplayTie = true;
+          }
+        }
+        grupo.forEach(e => result.push(e));
+      }
+      i = j;
+    }
+
+    return result;
   },
 
   // =====================================================
