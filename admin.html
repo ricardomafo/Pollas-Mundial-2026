@@ -110,46 +110,50 @@
     }
 
     async function cargarListas() {
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Sin respuesta de Supabase. ¿Está el proyecto activo?')), 8000)
-      );
-      try {
-        await Promise.race([Promise.all([cargarPendientes(), cargarAprobados()]), timeout]);
-      } catch(e) {
-        document.getElementById('lista-pendientes').innerHTML =
-          `<p style="color:#ff4444;font-size:0.85rem;">⚠️ ${e.message}</p>`;
-        document.getElementById('lista-aprobados').innerHTML =
-          `<p style="color:#ff4444;font-size:0.85rem;">⚠️ ${e.message}</p>`;
-      }
+      await Promise.all([cargarPendientes(), cargarAprobados()]);
+    }
+
+    async function queryDirect(estado) {
+      // Consulta directa con timeout de 6s
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), 6000);
+        let q = supabaseClient.from('participantes').select('*').eq('grupo', adminGrupo);
+        if (estado) q = q.eq('estado', estado);
+        q.then(({ data, error }) => {
+          clearTimeout(timer);
+          resolve(error ? null : (data || []));
+        }).catch(() => { clearTimeout(timer); resolve(null); });
+      });
     }
 
     async function cargarPendientes() {
       const el = document.getElementById('lista-pendientes');
       const badge = document.getElementById('badge-pendientes');
       try {
-        const lista = await db.getPendientes(adminGrupo);
+        let lista = await queryDirect('pendiente');
+        if (lista === null) {
+          // columna estado no existe aún — no hay pendientes
+          lista = [];
+        }
         badge.textContent = lista.length;
         badge.style.display = lista.length > 0 ? 'inline' : 'none';
-
         if (lista.length === 0) {
           el.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;padding:8px 0;">No hay solicitudes pendientes.</p>`;
           return;
         }
-
         el.innerHTML = lista.map(p => `
           <div id="card-${p.id}" class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:8px;">
             <div class="avatar" style="width:40px;height:40px;font-size:1.1rem;flex-shrink:0;">${p.nombre.charAt(0).toUpperCase()}</div>
             <div style="flex:1;min-width:0;">
-              <div style="font-weight:800;font-size:0.95rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nombre)}</div>
+              <div style="font-weight:800;font-size:0.95rem;color:var(--text);">${escapeHtml(p.nombre)}</div>
               <div style="font-size:0.75rem;color:var(--text-muted);">Quiere unirse al grupo ${escapeHtml(p.grupo)}</div>
             </div>
             <div style="display:flex;gap:8px;flex-shrink:0;">
               <button onclick="aprobar('${p.id}')" style="padding:8px 14px;background:rgba(0,200,83,0.15);border:1px solid rgba(0,200,83,0.4);color:var(--green);border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">✅ Aceptar</button>
               <button onclick="rechazar('${p.id}')" style="padding:8px 14px;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);color:#ff4444;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">❌ Rechazar</button>
             </div>
-          </div>
-        `).join('');
-      } catch (e) {
+          </div>`).join('');
+      } catch(e) {
         el.innerHTML = `<p style="color:#ff4444;font-size:0.85rem;">Error: ${e.message}</p>`;
       }
     }
@@ -157,18 +161,20 @@
     async function cargarAprobados() {
       const el = document.getElementById('lista-aprobados');
       try {
-        const lista = await db.getAprobados(adminGrupo);
-
+        let lista = await queryDirect('aprobado');
+        if (lista === null) {
+          // columna estado no existe — traer todos del grupo
+          lista = (await queryDirect(null)) || [];
+        }
         if (lista.length === 0) {
           el.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;padding:8px 0;">No hay participantes activos.</p>`;
           return;
         }
-
         el.innerHTML = lista.map(p => {
           const esElMismo = p.nombre.toLowerCase() === adminNombre.toLowerCase();
           return `
             <div id="card-${p.id}" class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:8px;">
-              <div class="avatar" style="width:40px;height:40px;font-size:1.1rem;flex-shrink:0;${p.es_admin ? 'background:rgba(255,214,0,0.2);' : ''}">${p.nombre.charAt(0).toUpperCase()}</div>
+              <div class="avatar" style="width:40px;height:40px;font-size:1.1rem;flex-shrink:0;${p.es_admin?'background:rgba(255,214,0,0.2);':''}">${p.nombre.charAt(0).toUpperCase()}</div>
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:800;font-size:0.95rem;color:var(--text);display:flex;align-items:center;gap:6px;">
                   ${escapeHtml(p.nombre)}
@@ -177,16 +183,14 @@
                 </div>
               </div>
               ${!esElMismo && !p.es_admin ? `
-                <button onclick="expulsar('${p.id}', '${escapeAttr(p.nombre)}')" style="padding:8px 14px;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);color:#ff4444;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;flex-shrink:0;">🚫 Expulsar</button>
+                <button onclick="expulsar('${p.id}','${escapeAttr(p.nombre)}')" style="padding:8px 14px;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);color:#ff4444;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;flex-shrink:0;">🚫 Expulsar</button>
               ` : '<div style="width:90px;"></div>'}
-            </div>
-          `;
+            </div>`;
         }).join('');
-      } catch (e) {
+      } catch(e) {
         el.innerHTML = `<p style="color:#ff4444;font-size:0.85rem;">Error: ${e.message}</p>`;
       }
     }
-
     async function aprobar(id) {
       const card = document.getElementById(`card-${id}`);
       if (card) card.style.opacity = '0.5';
