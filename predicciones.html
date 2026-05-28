@@ -671,12 +671,27 @@
       function renderSlotNombre(nombre, slot, alinear) {
         const info = slot && window._fairplayInfo && window._fairplayInfo[slot];
         if (info) {
+          const confirmed = window.fairplayPicks && window.fairplayPicks[slot];
+          if (confirmed) {
+            // Slot ya confirmado: mostrar bloqueado
+            return `<span style="display:inline-flex;align-items:center;gap:5px;justify-content:${alinear==='right'?'flex-end':'flex-start'};">
+              <span style="font-size:0.65rem;background:rgba(0,200,83,0.15);color:var(--green);border-radius:4px;padding:1px 5px;">✓</span>
+              <span style="font-weight:700;">${getFlag(confirmed)} ${escH(confirmed)}</span>
+            </span>`;
+          }
+          // Filtrar equipos ya confirmados en otros slots del mismo pool
+          const alreadyPicked = new Set(
+            Object.entries(window.fairplayPicks || {})
+              .filter(([k, v]) => k !== slot && info.candidates.includes(v))
+              .map(([, v]) => v)
+          );
+          const disponibles = info.candidates.filter(c => !alreadyPicked.has(c));
           const selectStyle = 'background:rgba(255,214,0,0.08);border:1px solid rgba(255,214,0,0.45);border-radius:7px;color:var(--gold);font-size:0.75rem;font-weight:700;padding:4px 6px;cursor:pointer;max-width:130px;outline:none;';
           const btnStyle = 'background:rgba(0,200,83,0.15);border:1px solid rgba(0,200,83,0.4);color:var(--green);border-radius:6px;padding:3px 9px;font-size:0.72rem;font-weight:700;cursor:pointer;opacity:0.3;pointer-events:none;transition:opacity 0.2s,background 0.2s;';
           return `<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:${alinear==='right'?'flex-end':'flex-start'};">
             <span style="font-size:0.68rem;background:rgba(255,214,0,0.15);color:var(--gold);border-radius:4px;padding:1px 5px;letter-spacing:.5px;">⚖️ Fair play</span>
             <select style="${selectStyle}" onchange="fpPreview('${slot}',this.value)">
-              ${info.candidates.map(c => `<option value="${escH(c)}"${c===nombre?' selected':''}>${getFlag(c)} ${escH(c)}</option>`).join('')}
+              ${disponibles.map(c => `<option value="${escH(c)}"${c===nombre?' selected':''}>${getFlag(c)} ${escH(c)}</option>`).join('')}
             </select>
             <button id="fp-ok-${slot}" style="${btnStyle}" onclick="confirmarFairplay('${slot}')">✓ OK</button>
           </span>`;
@@ -734,14 +749,18 @@
         if (!isNaN(glPred) && !isNaN(gvPred) && glPred === gvPred) {
           const pp = (window.penaltyPicks || {})[partido.id];
           const btnBase = 'flex:1;padding:6px 4px;border-radius:8px;font-size:0.76rem;font-weight:700;cursor:pointer;transition:all 0.15s;';
-          const btnLocalActive  = pp === 'local'  ? 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);'  : 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
-          const btnVisitaActive = pp === 'visita' ? 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);' : 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
+          const activeStyle  = 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);';
+          const inactiveStyle = 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
+          const btnLocalStyle  = pp === 'local'  ? activeStyle : inactiveStyle;
+          const btnVisitaStyle = pp === 'visita' ? activeStyle : inactiveStyle;
+          const btnOkStyle = `background:rgba(0,200,83,0.15);border:1px solid rgba(0,200,83,0.4);color:var(--green);border-radius:6px;padding:4px 14px;font-size:0.72rem;font-weight:700;cursor:pointer;opacity:0.3;pointer-events:none;transition:opacity 0.2s;flex-shrink:0;`;
           penaltisHtml = `
             <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
               <p style="font-size:0.68rem;color:var(--text-muted);text-align:center;margin:0 0 7px;letter-spacing:.3px;">🥅 Empate ${glPred}–${gvPred} · ¿quién gana los penaltis?</p>
-              <div style="display:flex;gap:6px;">
-                <button style="${btnBase}${btnLocalActive}"  onclick="setPenaltyPick(${partido.id},'local')">${getFlag(localNombre)} ${escH(localNombre)}</button>
-                <button style="${btnBase}${btnVisitaActive}" onclick="setPenaltyPick(${partido.id},'visita')">${getFlag(visitaNombre)} ${escH(visitaNombre)}</button>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <button id="pp-local-${partido.id}"  style="${btnBase}${btnLocalStyle}"  onclick="penaltyPreview(${partido.id},'local')">${getFlag(localNombre)} ${escH(localNombre)}</button>
+                <button id="pp-visita-${partido.id}" style="${btnBase}${btnVisitaStyle}" onclick="penaltyPreview(${partido.id},'visita')">${getFlag(visitaNombre)} ${escH(visitaNombre)}</button>
+                <button id="pp-ok-${partido.id}" style="${btnOkStyle}" onclick="confirmarPenalty(${partido.id})">✓ OK</button>
               </div>
             </div>`;
         }
@@ -851,7 +870,6 @@
     }
 
     function fpPreview(slotKey, value) {
-      // Guardar selección pendiente y activar botón sin re-renderizar
       if (!window._fpPending) window._fpPending = {};
       window._fpPending[slotKey] = value;
       const btn = document.getElementById('fp-ok-' + slotKey);
@@ -861,6 +879,26 @@
     function confirmarFairplay(slotKey) {
       const val = (window._fpPending || {})[slotKey];
       if (val) setFairplayPick(slotKey, val);
+    }
+
+    function penaltyPreview(partidoId, winner) {
+      if (!window._penaltyPending) window._penaltyPending = {};
+      window._penaltyPending[partidoId] = winner;
+      const btnLocal  = document.getElementById(`pp-local-${partidoId}`);
+      const btnVisita = document.getElementById(`pp-visita-${partidoId}`);
+      const btnOk     = document.getElementById(`pp-ok-${partidoId}`);
+      const activeStyle   = 'rgba(255,214,0,0.18)';
+      const inactiveStyle = 'var(--surface3)';
+      if (btnLocal)  { btnLocal.style.background  = winner === 'local'  ? activeStyle : inactiveStyle; btnLocal.style.borderColor  = winner === 'local'  ? 'var(--gold)' : 'var(--border)'; btnLocal.style.color  = winner === 'local'  ? 'var(--gold)' : 'var(--text-muted)'; }
+      if (btnVisita) { btnVisita.style.background = winner === 'visita' ? activeStyle : inactiveStyle; btnVisita.style.borderColor = winner === 'visita' ? 'var(--gold)' : 'var(--border)'; btnVisita.style.color = winner === 'visita' ? 'var(--gold)' : 'var(--text-muted)'; }
+      if (btnOk) { btnOk.style.opacity = '1'; btnOk.style.pointerEvents = 'auto'; }
+    }
+
+    function confirmarPenalty(partidoId) {
+      const val = (window._penaltyPending || {})[partidoId];
+      if (!val) return;
+      delete window._penaltyPending[partidoId];
+      setPenaltyPick(partidoId, val);
     }
 
     function setFairplayPick(slotKey, value) {
