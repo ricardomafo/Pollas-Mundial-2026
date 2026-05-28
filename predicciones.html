@@ -88,6 +88,7 @@
     window._todosTerceros  = []; // lista ordenada de 3ros para la tabla
     window._viendoTerceros = false;
     window.penaltyPicks    = JSON.parse(localStorage.getItem('mundial_penaltis') || '{}'); // { partido_id: 'local'|'visita' }
+    let _slotMapCache = null; // cache para evitar recalcular en cada tab
 
     // =====================================================
     // INIT
@@ -176,6 +177,11 @@
     // Basado en las predicciones del usuario
     // =====================================================
     function calcularSlotMap() {
+      if (_slotMapCache) {
+        window._fairplayInfo  = _slotMapCache.fairplayInfo;
+        window._todosTerceros = _slotMapCache.todosTerceros;
+        return _slotMapCache.slotMap;
+      }
       const slotMap = {};
       window._fairplayInfo = {}; // resetear en cada recálculo
 
@@ -371,6 +377,7 @@
       // Exponer lista de terceros para la tabla de mejores 3°
       window._todosTerceros = todosTerceros;
 
+      _slotMapCache = { slotMap, fairplayInfo: window._fairplayInfo, todosTerceros };
       return slotMap;
     }
 
@@ -457,8 +464,7 @@
     }
 
     function renderMejoresTerceros(container) {
-      // Recalcular para tener datos frescos
-      calcularSlotMap();
+      calcularSlotMap(); // usa cache si está disponible
       const terceros = window._todosTerceros || [];
 
       if (terceros.length === 0) {
@@ -511,9 +517,11 @@
       html += `<p style="color:var(--text-muted);font-size:0.72rem;margin:8px 2px 0;">Clasifican los 8 mejores · pts → dif. goles → goles a favor</p>`;
 
       if (hasFP) {
-        html += `<div style="margin-top:10px;background:rgba(255,214,0,0.07);border:1px solid rgba(255,214,0,0.25);border-radius:10px;padding:10px 14px;font-size:0.76rem;color:var(--text-muted);">
+        html += `<div style="margin-top:10px;margin-bottom:16px;background:rgba(255,214,0,0.07);border:1px solid rgba(255,214,0,0.25);border-radius:10px;padding:10px 14px;font-size:0.76rem;color:var(--text-muted);">
           <strong style="color:var(--gold);">⚖️ Empate por fair play</strong> — Equipos marcados están empatados en todos los criterios. Ve a <strong>16avos</strong> para elegir cuáles crees que clasifican.
         </div>`;
+      } else {
+        html += `<div style="height:16px;"></div>`;
       }
 
       container.innerHTML = html;
@@ -719,21 +727,24 @@
            </div>`
         : '';
 
-      // Selector de penaltis (solo en fases eliminatorias, no en grupos)
+      // Selector de penaltis (solo en fases eliminatorias, si la predicción guardada es empate)
       let penaltisHtml = '';
-      if (partido.fase !== 'grupos' && !esTBD && !jugado) {
-        const pp = (window.penaltyPicks || {})[partido.id];
-        const btnBase = 'flex:1;padding:6px 4px;border-radius:8px;font-size:0.76rem;font-weight:700;cursor:pointer;transition:all 0.15s;';
-        const btnLocalActive   = pp === 'local'   ? 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);'   : 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
-        const btnVisitaActive  = pp === 'visita'  ? 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);'  : 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
-        penaltisHtml = `
-          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-            <p style="font-size:0.68rem;color:var(--text-muted);text-align:center;margin:0 0 7px;letter-spacing:.3px;">🥅 Si hay empate, ¿quién gana los penaltis?</p>
-            <div style="display:flex;gap:6px;">
-              <button style="${btnBase}${btnLocalActive}" onclick="setPenaltyPick(${partido.id},'local')">${getFlag(localNombre)} ${escH(localNombre)}</button>
-              <button style="${btnBase}${btnVisitaActive}" onclick="setPenaltyPick(${partido.id},'visita')">${getFlag(visitaNombre)} ${escH(visitaNombre)}</button>
-            </div>
-          </div>`;
+      if (partido.fase !== 'grupos' && !esTBD && !jugado && pred) {
+        const glPred = parseInt(pred.goles_local), gvPred = parseInt(pred.goles_visitante);
+        if (!isNaN(glPred) && !isNaN(gvPred) && glPred === gvPred) {
+          const pp = (window.penaltyPicks || {})[partido.id];
+          const btnBase = 'flex:1;padding:6px 4px;border-radius:8px;font-size:0.76rem;font-weight:700;cursor:pointer;transition:all 0.15s;';
+          const btnLocalActive  = pp === 'local'  ? 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);'  : 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
+          const btnVisitaActive = pp === 'visita' ? 'background:rgba(255,214,0,0.18);border:1px solid var(--gold);color:var(--gold);' : 'background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);';
+          penaltisHtml = `
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+              <p style="font-size:0.68rem;color:var(--text-muted);text-align:center;margin:0 0 7px;letter-spacing:.3px;">🥅 Empate ${glPred}–${gvPred} · ¿quién gana los penaltis?</p>
+              <div style="display:flex;gap:6px;">
+                <button style="${btnBase}${btnLocalActive}"  onclick="setPenaltyPick(${partido.id},'local')">${getFlag(localNombre)} ${escH(localNombre)}</button>
+                <button style="${btnBase}${btnVisitaActive}" onclick="setPenaltyPick(${partido.id},'visita')">${getFlag(visitaNombre)} ${escH(visitaNombre)}</button>
+              </div>
+            </div>`;
+        }
       }
 
       return `
@@ -820,7 +831,7 @@
       try {
         await Promise.all(promesas);
         mostrarToast(`${contador} predicciones guardadas`);
-        // Re-renderizar para actualizar la simulación
+        _slotMapCache = null; // invalidar cache al guardar
         renderizarPartidos(faseActual);
       } catch(e) { mostrarToast('Error al guardar'); }
 
@@ -835,6 +846,7 @@
       if (!window.penaltyPicks) window.penaltyPicks = {};
       window.penaltyPicks[partidoId] = winner;
       localStorage.setItem('mundial_penaltis', JSON.stringify(window.penaltyPicks));
+      _slotMapCache = null;
       renderizarPartidos(faseActual);
     }
 
@@ -861,6 +873,7 @@
         window.fairplayPicks[info.pairedSlot] = otro;
       }
       localStorage.setItem('mundial_fairplay', JSON.stringify(window.fairplayPicks));
+      _slotMapCache = null;
       renderizarPartidos(faseActual);
     }
 
