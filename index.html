@@ -54,45 +54,54 @@
       <!-- FORMULARIO -->
       <div style="position:relative;z-index:2;background:linear-gradient(to bottom,transparent,#04080f 16%);padding:0 0 env(safe-area-inset-bottom,0px);">
         <div style="max-width:420px;margin:0 auto;padding:0 20px 38px;">
-          <!-- PASO 1: Nombre + Código -->
-          <div id="paso-1">
-            <p style="text-align:center;font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.22);font-weight:700;margin-bottom:20px;">Entra a tu grupo</p>
+          <!-- PANTALLA INICIAL: Elegir acción -->
+          <div id="pantalla-inicio">
+            <p style="text-align:center;font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.22);font-weight:700;margin-bottom:24px;">¿Qué quieres hacer?</p>
+            <button onclick="mostrarFormLogin()" style="width:100%;padding:17px;background:linear-gradient(135deg,#7a5500,#c9a84c,#f0c830,#c9a84c);border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:#000;font-weight:900;cursor:pointer;box-shadow:0 4px 32px rgba(201,168,76,0.28);margin-bottom:12px;">
+              INICIAR SESIÓN
+            </button>
+            <button onclick="mostrarFormRegistro()" style="width:100%;padding:15px;background:none;border:1px solid rgba(201,168,76,0.4);border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:4px;color:var(--gold);font-weight:900;cursor:pointer;">
+              REGISTRARSE
+            </button>
+          </div>
+
+          <!-- FORMULARIO: Iniciar sesión -->
+          <div id="form-login" class="hidden">
+            <p style="text-align:center;font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.22);font-weight:700;margin-bottom:20px;">Iniciar sesión</p>
             <div style="margin-bottom:12px;">
               <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Tu nombre</label>
-              <input type="text" id="nombre-input" class="input-field" placeholder="Ej: Juan, María, Abuela..." maxlength="50" autocomplete="off" style="width:100%;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" onkeydown="if(event.key==='Enter')verificarNombre()"/>
+              <input type="text" id="login-nombre-input" class="input-field" placeholder="Ej: Juan, María..." maxlength="50" autocomplete="off" style="width:100%;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" onkeydown="if(event.key==='Enter')document.getElementById('login-pin-input').focus()"/>
             </div>
             <div style="margin-bottom:4px;">
               <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Código de grupo</label>
-              <input type="text" id="codigo-input" class="input-field" placeholder="Ej: FAMILIA" maxlength="30" autocomplete="off" style="width:100%;text-transform:uppercase;letter-spacing:3px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')verificarNombre()"/>
+              <input type="text" id="login-codigo-input" class="input-field" placeholder="Ej: FAMILIA" maxlength="30" autocomplete="off" style="width:100%;text-transform:uppercase;letter-spacing:3px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.toUpperCase();actualizarGrupoLogin()"/>
             </div>
-            <p id="grupo-nombre" style="font-size:0.78rem;color:var(--green);min-height:20px;margin-bottom:14px;padding-left:2px;font-weight:600;"></p>
-            <button id="btn-continuar" onclick="verificarNombre()" style="width:100%;padding:17px;background:linear-gradient(135deg,#7a5500,#c9a84c,#f0c830,#c9a84c);border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:#000;font-weight:900;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 32px rgba(201,168,76,0.28),0 0 0 1px rgba(201,168,76,0.15);">
-              CONTINUAR
-            </button>
-            <p id="error-paso1" class="hidden" style="color:var(--red);font-size:0.82rem;margin-top:12px;text-align:center;"></p>
-          </div>
-
-          <!-- PASO 2: Login (nombre existe) -->
-          <div id="paso-login" class="hidden">
-            <p style="text-align:center;font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.22);font-weight:700;margin-bottom:6px;">Bienvenido de vuelta</p>
-            <p id="login-saludo" style="text-align:center;font-size:1.1rem;font-weight:800;color:var(--gold);margin-bottom:18px;"></p>
+            <p id="login-grupo-nombre" style="font-size:0.78rem;color:var(--green);min-height:20px;margin-bottom:8px;padding-left:2px;font-weight:600;"></p>
             <div style="margin-bottom:14px;">
               <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Tu PIN</label>
-              <input type="password" id="pin-login" class="input-field" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="current-password" style="width:100%;letter-spacing:8px;font-size:1.4rem;text-align:center;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" onkeydown="if(event.key==='Enter')iniciarSesion()"/>
+              <input type="password" id="login-pin-input" class="input-field" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="current-password" style="width:100%;letter-spacing:8px;font-size:1.4rem;text-align:center;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" onkeydown="if(event.key==='Enter')iniciarSesion()"/>
             </div>
-            <button onclick="iniciarSesion()" style="width:100%;padding:17px;background:linear-gradient(135deg,#7a5500,#c9a84c,#f0c830,#c9a84c);border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:#000;font-weight:900;cursor:pointer;box-shadow:0 4px 32px rgba(201,168,76,0.28);">
+            <button onclick="iniciarSesion()" style="width:100%;padding:17px;background:linear-gradient(135deg,#7a5500,#c9a84c,#f0c830,#c9a84c);border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:#000;font-weight:900;cursor:pointer;box-shadow:0 4px 32px rgba(201,168,76,0.28);margin-bottom:10px;">
               ENTRAR
             </button>
-            <button onclick="volverPaso1()" style="width:100%;margin-top:10px;padding:12px;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:12px;color:rgba(255,255,255,0.4);font-size:0.82rem;cursor:pointer;">
-              ← No soy yo, cambiar nombre
+            <button onclick="volverInicio()" style="width:100%;padding:12px;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:12px;color:rgba(255,255,255,0.4);font-size:0.82rem;cursor:pointer;">
+              ← Volver
             </button>
             <p id="error-login" class="hidden" style="color:var(--red);font-size:0.82rem;margin-top:12px;text-align:center;"></p>
           </div>
 
-          <!-- PASO 2: Registro (nombre nuevo) -->
-          <div id="paso-registro" class="hidden">
-            <p style="text-align:center;font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.22);font-weight:700;margin-bottom:6px;">Nueva cuenta</p>
-            <p id="reg-saludo" style="text-align:center;font-size:1.1rem;font-weight:800;color:var(--gold);margin-bottom:18px;"></p>
+          <!-- FORMULARIO: Registrarse -->
+          <div id="form-registro" class="hidden">
+            <p style="text-align:center;font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.22);font-weight:700;margin-bottom:20px;">Crear cuenta</p>
+            <div style="margin-bottom:12px;">
+              <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Tu nombre</label>
+              <input type="text" id="nombre-input" class="input-field" placeholder="Ej: Juan, María, Abuela..." maxlength="50" autocomplete="off" style="width:100%;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);"/>
+            </div>
+            <div style="margin-bottom:4px;">
+              <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Código de grupo</label>
+              <input type="text" id="codigo-input" class="input-field" placeholder="Ej: FAMILIA" maxlength="30" autocomplete="off" style="width:100%;text-transform:uppercase;letter-spacing:3px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.toUpperCase()"/>
+            </div>
+            <p id="grupo-nombre" style="font-size:0.78rem;color:var(--green);min-height:20px;margin-bottom:8px;padding-left:2px;font-weight:600;"></p>
             <div style="margin-bottom:10px;">
               <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Crea tu PIN <span style="font-size:0.62rem;font-weight:400;text-transform:none;letter-spacing:0;">(4 dígitos)</span></label>
               <input type="password" id="pin-nuevo" class="input-field" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="new-password" style="width:100%;letter-spacing:8px;font-size:1.4rem;text-align:center;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"/>
@@ -101,16 +110,16 @@
               <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Confirma tu PIN</label>
               <input type="password" id="pin-confirmar" class="input-field" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="new-password" style="width:100%;letter-spacing:8px;font-size:1.4rem;text-align:center;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" onkeydown="if(event.key==='Enter')completarRegistro()"/>
             </div>
-            <button onclick="completarRegistro()" style="width:100%;padding:17px;background:linear-gradient(135deg,#7a5500,#c9a84c,#f0c830,#c9a84c);border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:#000;font-weight:900;cursor:pointer;box-shadow:0 4px 32px rgba(201,168,76,0.28);">
+            <button onclick="completarRegistro()" style="width:100%;padding:17px;background:linear-gradient(135deg,#7a5500,#c9a84c,#f0c830,#c9a84c);border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:#000;font-weight:900;cursor:pointer;box-shadow:0 4px 32px rgba(201,168,76,0.28);margin-bottom:10px;">
               REGISTRARSE
             </button>
-            <button onclick="volverPaso1()" style="width:100%;margin-top:10px;padding:12px;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:12px;color:rgba(255,255,255,0.4);font-size:0.82rem;cursor:pointer;">
+            <button onclick="volverInicio()" style="width:100%;padding:12px;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:12px;color:rgba(255,255,255,0.4);font-size:0.82rem;cursor:pointer;">
               ← Volver
             </button>
             <p id="error-registro" class="hidden" style="color:var(--red);font-size:0.82rem;margin-top:12px;text-align:center;"></p>
           </div>
 
-          <p id="registro-error" class="hidden" style="color:var(--red);font-size:0.82rem;margin-top:12px;text-align:center;"></p>
+          <p id="registro-error" class="hidden"></p>
         </div>
       </div>
     </div>
@@ -635,98 +644,68 @@
       mostrarBienvenida(p);
     }
 
-    function volverPaso1() {
-      document.getElementById('paso-login').classList.add('hidden');
-      document.getElementById('paso-registro').classList.add('hidden');
-      document.getElementById('paso-1').classList.remove('hidden');
-      document.getElementById('error-paso1').classList.add('hidden');
-      document.getElementById('pin-login').value = '';
-      document.getElementById('pin-nuevo').value = '';
-      document.getElementById('pin-confirmar').value = '';
+    function mostrarFormLogin()    { document.getElementById('pantalla-inicio').classList.add('hidden'); document.getElementById('form-login').classList.remove('hidden'); setTimeout(()=>document.getElementById('login-nombre-input').focus(),100); }
+    function mostrarFormRegistro() { document.getElementById('pantalla-inicio').classList.add('hidden'); document.getElementById('form-registro').classList.remove('hidden'); setTimeout(()=>document.getElementById('nombre-input').focus(),100); }
+    function volverInicio() {
+      document.getElementById('form-login').classList.add('hidden');
+      document.getElementById('form-registro').classList.add('hidden');
+      document.getElementById('pantalla-inicio').classList.remove('hidden');
+      ['error-login','error-registro'].forEach(id => document.getElementById(id).classList.add('hidden'));
     }
 
-    async function verificarNombre() {
-      const nombre  = document.getElementById('nombre-input').value.trim();
-      const codigo  = document.getElementById('codigo-input').value.trim().toUpperCase();
-      const errorEl = document.getElementById('error-paso1');
-      const btn     = document.getElementById('btn-continuar');
+    function actualizarGrupoLogin() {
+      const codigo = document.getElementById('login-codigo-input').value.trim().toUpperCase();
+      const nombre = GRUPOS[codigo];
+      document.getElementById('login-grupo-nombre').textContent = nombre ? '✓ ' + nombre : '';
+    }
+
+    async function iniciarSesion() {
+      const nombre  = document.getElementById('login-nombre-input').value.trim();
+      const codigo  = document.getElementById('login-codigo-input').value.trim().toUpperCase();
+      const pin     = document.getElementById('login-pin-input').value.trim();
+      const errorEl = document.getElementById('error-login');
       errorEl.classList.add('hidden');
 
-      if (!nombre || nombre.length < 2) {
-        errorEl.textContent = 'Por favor entra un nombre de al menos 2 caracteres.';
-        errorEl.classList.remove('hidden'); return;
-      }
-      const grupoNombre = GRUPOS[codigo];
-      if (!grupoNombre) {
-        errorEl.textContent = 'Código de grupo incorrecto. Pídelo al organizador.';
-        errorEl.classList.remove('hidden'); return;
-      }
+      if (!nombre || nombre.length < 2) { errorEl.textContent = 'Ingresa tu nombre.'; errorEl.classList.remove('hidden'); return; }
+      if (!GRUPOS[codigo])              { errorEl.textContent = 'Código de grupo incorrecto.'; errorEl.classList.remove('hidden'); return; }
+      if (!pin || pin.length !== 4)     { errorEl.textContent = 'Ingresa tu PIN de 4 dígitos.'; errorEl.classList.remove('hidden'); return; }
 
-      btn.disabled = true; btn.textContent = 'Verificando...';
       try {
         const existentes = await db.getTodosParticipantes();
-        window._grupoNombreActual = grupoNombre;
-        const duplicado = existentes.find(p => p.nombre.trim().toLowerCase() === nombre.toLowerCase());
-
-        document.getElementById('paso-1').classList.add('hidden');
-        if (duplicado) {
-          window._participanteExistente = duplicado;
-          document.getElementById('login-saludo').textContent = duplicado.nombre;
-          document.getElementById('paso-login').classList.remove('hidden');
-          setTimeout(() => document.getElementById('pin-login').focus(), 100);
-        } else {
-          document.getElementById('reg-saludo').textContent = '¡Hola, ' + nombre + '!';
-          document.getElementById('paso-registro').classList.remove('hidden');
-          setTimeout(() => document.getElementById('pin-nuevo').focus(), 100);
+        const p = existentes.find(e => e.nombre.trim().toLowerCase() === nombre.toLowerCase());
+        if (!p) { errorEl.textContent = 'No existe una cuenta con ese nombre. ¿Quieres registrarte?'; errorEl.classList.remove('hidden'); return; }
+        if (!p.pin) {
+          await db.setPin(p.id, pin);
+          sesionLocal({ ...p, pin }); return;
         }
+        if (p.pin !== pin) { errorEl.textContent = 'PIN incorrecto. Si lo olvidaste, contacta al organizador.'; errorEl.classList.remove('hidden'); return; }
+        sesionLocal(p);
       } catch(e) {
         console.error(e);
         errorEl.textContent = 'Error al conectar. Comprueba tu conexión.';
         errorEl.classList.remove('hidden');
-      } finally {
-        btn.disabled = false; btn.textContent = 'CONTINUAR';
       }
-    }
-
-    async function iniciarSesion() {
-      const p      = window._participanteExistente;
-      const pin    = document.getElementById('pin-login').value.trim();
-      const errorEl= document.getElementById('error-login');
-      errorEl.classList.add('hidden');
-
-      if (!pin || pin.length !== 4) {
-        errorEl.textContent = 'Ingresa tu PIN de 4 dígitos.';
-        errorEl.classList.remove('hidden'); return;
-      }
-      if (!p.pin) {
-        // Cuenta sin PIN aún → asignar
-        await db.setPin(p.id, pin);
-        sesionLocal({ ...p, pin }); return;
-      }
-      if (p.pin !== pin) {
-        errorEl.textContent = 'PIN incorrecto. Si lo olvidaste, contacta al organizador.';
-        errorEl.classList.remove('hidden'); return;
-      }
-      sesionLocal(p);
     }
 
     async function completarRegistro() {
-      const nombre    = document.getElementById('nombre-input').value.trim();
-      const pinNuevo  = document.getElementById('pin-nuevo').value.trim();
-      const pinConf   = document.getElementById('pin-confirmar').value.trim();
-      const errorEl   = document.getElementById('error-registro');
+      const nombre   = document.getElementById('nombre-input').value.trim();
+      const codigo   = document.getElementById('codigo-input').value.trim().toUpperCase();
+      const pinNuevo = document.getElementById('pin-nuevo').value.trim();
+      const pinConf  = document.getElementById('pin-confirmar').value.trim();
+      const errorEl  = document.getElementById('error-registro');
       errorEl.classList.add('hidden');
 
-      if (!pinNuevo || pinNuevo.length !== 4) {
-        errorEl.textContent = 'El PIN debe ser de 4 dígitos.';
-        errorEl.classList.remove('hidden'); return;
-      }
-      if (pinNuevo !== pinConf) {
-        errorEl.textContent = 'Los PINs no coinciden. Vuelve a intentarlo.';
-        errorEl.classList.remove('hidden'); return;
-      }
+      if (!nombre || nombre.length < 2) { errorEl.textContent = 'Ingresa un nombre de al menos 2 caracteres.'; errorEl.classList.remove('hidden'); return; }
+      const grupoNombre = GRUPOS[codigo];
+      if (!grupoNombre) { errorEl.textContent = 'Código de grupo incorrecto. Pídelo al organizador.'; errorEl.classList.remove('hidden'); return; }
+      if (!pinNuevo || pinNuevo.length !== 4) { errorEl.textContent = 'El PIN debe ser de 4 dígitos.'; errorEl.classList.remove('hidden'); return; }
+      if (pinNuevo !== pinConf) { errorEl.textContent = 'Los PINs no coinciden.'; errorEl.classList.remove('hidden'); return; }
+
       try {
-        const participante = await db.registrar(nombre, window._grupoNombreActual, pinNuevo);
+        const existentes = await db.getTodosParticipantes();
+        const duplicado = existentes.find(p => p.nombre.trim().toLowerCase() === nombre.toLowerCase());
+        if (duplicado) { errorEl.textContent = `Ya existe una cuenta con el nombre "${duplicado.nombre}". Ve a Iniciar sesión.`; errorEl.classList.remove('hidden'); return; }
+        const participante = await db.registrar(nombre, grupoNombre, pinNuevo);
         sesionLocal(participante);
       } catch(e) {
         console.error(e);
@@ -735,8 +714,7 @@
       }
     }
 
-    // Mantener compatibilidad con botón antiguo si existe
-    function registrarse() { verificarNombre(); }
+    function registrarse() { completarRegistro(); }
 
     function cambiarUsuario() {
       if (confirm('¿Seguro que quieres cambiar de usuario?')) {
