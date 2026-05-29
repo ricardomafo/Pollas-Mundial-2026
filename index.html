@@ -704,7 +704,7 @@
       try {
         const existentes = await db.getTodosParticipantes();
         const duplicado = existentes.find(p => p.nombre.trim().toLowerCase() === nombre.toLowerCase());
-        if (duplicado) { errorEl.textContent = `Ya existe una cuenta con el nombre "${duplicado.nombre}". Ve a Iniciar sesión.`; errorEl.classList.remove('hidden'); return; }
+        if (duplicado) { errorEl.textContent = `El nombre "${duplicado.nombre}" ya está registrado. Por favor elige otro nombre.`; errorEl.classList.remove('hidden'); return; }
         const participante = await db.registrar(nombre, grupoNombre, pinNuevo);
         sesionLocal(participante);
       } catch(e) {
