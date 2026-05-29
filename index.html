@@ -605,9 +605,21 @@
       }
 
       btn.disabled = true;
-      btn.textContent = 'Uniéndome...';
+      btn.textContent = 'Verificando...';
 
       try {
+        // Verificar nombre duplicado
+        const existentes = await db.getTodosParticipantes();
+        const duplicado = existentes.find(p => p.nombre.trim().toLowerCase() === nombre.toLowerCase());
+        if (duplicado) {
+          errorEl.textContent = `Ya existe alguien con el nombre "${duplicado.nombre}". Por favor elige otro nombre.`;
+          errorEl.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'Unirme a la polla';
+          return;
+        }
+
+        btn.textContent = 'Uniéndome...';
         const participante = await db.registrar(nombre, grupoNombre);
         localStorage.setItem('mundial_user_id', participante.id);
         localStorage.setItem('mundial_user_nombre', participante.nombre);

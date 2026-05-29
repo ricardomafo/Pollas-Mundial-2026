@@ -24,27 +24,31 @@ SUPABASE_URL  = 'https://sjixxpdoeqxcslcuyemf.supabase.co'
 SUPABASE_KEY  = 'sb_publishable_tSYbG9MpWR1QBDmM1zwr4Q_A7rhQK5S'
 ARCHIVO       = 'predicciones_bancoldex.xlsx'
 
+# Bracket oficial FIFA 2026 (fuente: schedule oficial FIFA, M73-M88)
 R32_BRACKET = [
-    (('G',1,'A'), ('G',2,'B')),
-    (('G',1,'C'), ('G',2,'D')),
-    (('G',1,'E'), ('G',2,'F')),
-    (('G',1,'G'), ('G',2,'H')),
-    (('G',1,'B'), ('G',2,'A')),
-    (('G',1,'D'), ('G',2,'C')),
-    (('G',1,'F'), ('G',2,'E')),
-    (('G',1,'H'), ('G',2,'G')),
-    (('G',1,'I'), ('G',2,'J')),
-    (('G',1,'K'), ('G',2,'L')),
-    (('G',1,'J'), ('G',2,'I')),
-    (('G',1,'L'), ('G',2,'K')),
-    (('T3',1),    ('T3',2)),
-    (('T3',3),    ('T3',4)),
-    (('T3',5),    ('T3',6)),
-    (('T3',7),    ('T3',8)),
+    (('G',2,'A'), ('G',2,'B')),   # M73
+    (('G',1,'E'), ('T3',1)),       # M74
+    (('G',1,'F'), ('G',2,'C')),   # M75
+    (('G',1,'C'), ('G',2,'F')),   # M76
+    (('G',1,'I'), ('T3',2)),       # M77
+    (('G',2,'E'), ('G',2,'I')),   # M78
+    (('G',1,'A'), ('T3',3)),       # M79
+    (('G',1,'L'), ('T3',4)),       # M80
+    (('G',1,'D'), ('T3',5)),       # M81
+    (('G',1,'G'), ('T3',6)),       # M82
+    (('G',2,'K'), ('G',2,'L')),   # M83
+    (('G',1,'H'), ('G',2,'J')),   # M84
+    (('G',1,'B'), ('T3',7)),       # M85
+    (('G',1,'J'), ('G',2,'H')),   # M86
+    (('G',1,'K'), ('T3',8)),       # M87
+    (('G',2,'D'), ('G',2,'G')),   # M88
 ]
-R16_PAIRS = [(0,1),(2,3),(4,5),(6,7),(8,9),(10,11),(12,13),(14,15)]
-QF_PAIRS  = [(0,1),(2,3),(4,5),(6,7)]
-SF_PAIRS  = [(0,1),(2,3)]
+# R16: M89=W74vsW77, M90=W73vsW75, M91=W83vsW84, M92=W81vsW82
+#      M93=W76vsW78, M94=W79vsW80, M95=W86vsW88, M96=W85vsW87
+# Índices en r32_filas: M73=0,M74=1,M75=2,M76=3,M77=4,M78=5,M79=6,M80=7,M81=8,M82=9,M83=10,M84=11,M85=12,M86=13,M87=14,M88=15
+R16_PAIRS = [(1,4),(0,2),(10,11),(8,9),(3,5),(6,7),(13,15),(12,14)]
+QF_PAIRS  = [(0,1),(2,3),(4,5),(6,7)]   # M97=W89vsW90, M98=W91vsW92, M99=W93vsW94, M100=W95vsW96
+SF_PAIRS  = [(0,1),(2,3)]               # M101=W97vsW98, M102=W99vsW100
 
 # ── Columnas ──────────────────────────────────────────────────────────────────
 C_NUM   = 1; C_FECHA = 2; C_HORA  = 3; C_LOCAL = 4
@@ -54,6 +58,7 @@ C_VISIT = 8; C_REAL  = 9
 C_PEN   = 10  # J  ganador penaltis  (lila, editable solo en eliminatorias)
 C_ST_EQ  = 11; C_ST_PTS = 12; C_ST_GF  = 13
 C_ST_GC  = 14; C_ST_DG  = 15; C_ST_SC  = 16; C_ST_RK  = 17
+C_FP     = 18  # R — desempate fairplay (editable, 1-4)
 
 # ── Estilos ───────────────────────────────────────────────────────────────────
 def fill(c): return PatternFill('solid', fgColor=c)
@@ -133,10 +138,11 @@ def main():
     # Listas para rastrear celdas editables
     pred_refs = []   # predicciones (validación numérica + desbloquear)
     pen_refs  = []   # penaltis (solo desbloquear, texto libre)
+    fp_refs   = []   # desempate fairplay (validación 1-4 + desbloquear)
 
     # ── Anchos ───────────────────────────────────────────────────────────────
     for c_, w in {1:5, 2:14, 3:8, 4:26, 5:6, 6:4, 7:6, 8:26, 9:12,
-                  10:20, 11:26, 12:5, 13:5, 14:5, 15:5, 16:5}.items():
+                  10:20, 11:26, 12:5, 13:5, 14:5, 15:5, 16:5, 18:22}.items():
         ws.column_dimensions[col(c_)].width = w
 
     ws.column_dimensions[col(C_ST_SC)].hidden = True
@@ -177,13 +183,16 @@ def main():
         c = ws.cell(2, c_, txt)
         c.font = font(bold=True, size=9, color=fg)
         c.fill = fill(bg); c.alignment = alin(wrap=True); c.border = borde()
-    ws.row_dimensions[2].height = 22
+    ws.row_dimensions[2].height = 46
 
     for c_, txt in [(C_ST_EQ,'Clasificación'), (C_ST_PTS,'Pts'),
                     (C_ST_GF,'GF'), (C_ST_GC,'GC'), (C_ST_DG,'DG')]:
         c = ws.cell(2, c_, txt)
         c.font = font(bold=True, size=8, color='555555')
         c.fill = fill(GRIS2); c.alignment = alin(); c.border = borde()
+    c = ws.cell(2, C_FP, '⚖️ DESEMPATE FAIRPLAY\nSolo si empate total en pts+DG+GF\nEscribe: 1°→1  2°→2  3°→3  4°→4')
+    c.font = font(bold=True, size=8, color='4a148c')
+    c.fill = fill('ede7f6'); c.alignment = alin(wrap=True); c.border = borde('ce93d8')
 
     # ── Escribir grupos ───────────────────────────────────────────────────────
     fila = 3
@@ -285,13 +294,17 @@ def main():
 
             pts_f = ref(st, C_ST_PTS); gf_f = ref(st, C_ST_GF)
             gc_f  = ref(st, C_ST_GC);  dg_f = ref(st, C_ST_DG)
+            fp_f  = ref(st, C_FP)
 
             ws.cell(st, C_ST_PTS).value = '=' + '+'.join(partes_pts)
             ws.cell(st, C_ST_GF ).value = '=' + '+'.join(partes_gf)
             ws.cell(st, C_ST_GC ).value = '=' + '+'.join(partes_gc)
             ws.cell(st, C_ST_DG ).value = f'={gf_f}-{gc_f}'
 
-            score = f'{pts_f}*10000+{dg_f}*100+{gf_f}+{(eq_idx+1)*0.001:.3f}'
+            # Si el usuario llenó el desempate fairplay, usarlo como tiebreaker final
+            score = (f'IF(ISNUMBER({fp_f}),'
+                     f'{pts_f}*10000+{dg_f}*100+{gf_f}+(1-{fp_f}/10000),'
+                     f'{pts_f}*10000+{dg_f}*100+{gf_f}+{(eq_idx+1)*0.001:.3f})')
             ws.cell(st, C_ST_SC).value = f'={score}'
             ws.cell(st, C_ST_SC).font  = font(size=8, color='aaaaaa')
 
@@ -299,6 +312,15 @@ def main():
                 ws.cell(st, cx).fill      = fill(GRIS1)
                 ws.cell(st, cx).alignment = alin()
                 ws.cell(st, cx).border    = borde()
+
+            # Celda de desempate fairplay
+            fp_cell = ws.cell(st, C_FP)
+            fp_cell.fill = fill('ede7f6'); fp_cell.alignment = alin()
+            fp_cell.border = borde('ce93d8')
+            fp_cell.font = font(size=9, color='4a148c', bold=True)
+            fp_cell.protection = Protection(locked=False)
+            fp_refs.append(fp_f)
+
             ws.row_dimensions[st].height = 17
 
         score_range_full = f'{col(C_ST_SC)}{fila}:{col(C_ST_SC)}{fila+3}'
@@ -521,7 +543,7 @@ def main():
     # ── Leyenda ───────────────────────────────────────────────────────────────
     ws.merge_cells(f'A{fila}:J{fila}')
     c = ws.cell(fila, 1,
-        '  🟢 Clasifica a 16avos   🔵 Posible mejor 3°   🔴 Eliminado   🟣 Escribe ganador si predices empate en eliminatoria')
+        '  🟢 Clasifica a 16avos   🔵 Posible mejor 3°   🔴 Eliminado   🟣 Escribe ganador si predices empate en eliminatoria   ⚖️ Col R: si hay empate total en el grupo, escribe 1 para el equipo que quieres primero, 2 para segundo…')
     c.font = font(size=8, color='555555', italic=True)
     c.fill = fill(GRIS1); c.alignment = alin('left')
     ws.row_dimensions[fila].height = 16
@@ -559,6 +581,21 @@ def main():
         ws.row_dimensions[fila].height = 17
         fila += 1
 
+    # ── Validación desempate fairplay (1-4) ───────────────────────────────────
+    dv_fp = DataValidation(
+        type='whole', operator='between', formula1=1, formula2=4,
+        allow_blank=True, showInputMessage=True,
+        promptTitle='Desempate por Fair Play',
+        prompt='Si dos o más equipos quedan empatados en PUNTOS, DG y GF: escribe 1 para el que quieres 1°, 2 para 2°, 3 para 3°, 4 para 4°.',
+        showErrorMessage=True,
+        errorTitle='Solo 1, 2, 3 o 4',
+        error='Escribe 1 (1° lugar), 2 (2° lugar), 3 (3° lugar) o 4 (4° lugar).',
+        errorStyle='stop'
+    )
+    ws.add_data_validation(dv_fp)
+    for r in fp_refs:
+        dv_fp.add(r)
+
     # ── Validación numérica en celdas de predicción ───────────────────────────
     print(f'  Aplicando validación en {len(pred_refs)} celdas de predicción...')
     dv = DataValidation(
@@ -594,10 +631,13 @@ def main():
 
     wb.save(ARCHIVO)
     print(f'\n✅ Listo: {ARCHIVO}')
-    print('   • Celdas amarillas: solo acepta números 0–99 (bloquea letras y símbolos)')
-    print('   • Celdas lilas: ganador en penaltis (texto libre)')
+    print('   • Celdas amarillas: predicciones (solo números 0–99)')
+    print('   • Celdas lilas (col J): ganador en penaltis en eliminatorias')
+    print('   • Celdas moradas (col R): desempate fairplay por grupo (solo 1-4)')
+    print('     → Solo llenar si dos o más equipos quedan empatados en pts, DG y GF')
+    print('     → Escribe 1 para el equipo que quieres en 1°, 2 para 2°, etc.')
     print('   • Celda dorada O1: tu nombre')
-    print('   • Todo lo demás está bloqueado (fórmulas y datos protegidos)')
+    print('   • Bracket: estructura oficial FIFA 2026 (M73-M104)')
     print('   • Para desproteger: Excel > Revisar > Desproteger hoja (sin contraseña)')
 
 if __name__ == '__main__':
