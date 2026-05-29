@@ -15,27 +15,24 @@ window.db = {
    * Registra un participante (upsert por nombre)
    * @returns {Object} participante
    */
-  async registrar(nombre, grupo) {
+  async registrar(nombre, grupo, pin) {
     const nombreLimpio = nombre.trim();
-    // Comprobar si ya existe en ese grupo
-    const { data: existe, error: errExiste } = await supabaseClient
-      .from('participantes')
-      .select('*')
-      .ilike('nombre', nombreLimpio)
-      .eq('grupo', grupo)
-      .maybeSingle();
-
-    if (errExiste) throw errExiste;
-    if (existe) return existe;
-
     const { data, error } = await supabaseClient
       .from('participantes')
-      .insert({ nombre: nombreLimpio, grupo, estado: 'pendiente' })
+      .insert({ nombre: nombreLimpio, grupo, estado: 'pendiente', pin: pin || null })
       .select()
       .single();
 
     if (error) throw error;
     return data;
+  },
+
+  async setPin(id, pin) {
+    const { error } = await supabaseClient
+      .from('participantes')
+      .update({ pin })
+      .eq('id', id);
+    if (error) throw error;
   },
 
   async aprobarParticipante(id) {

@@ -63,7 +63,11 @@
             <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Código de grupo</label>
             <input type="text" id="codigo-input" class="input-field" placeholder="Ej: FAMILIA" maxlength="30" autocomplete="off" style="width:100%;text-transform:uppercase;letter-spacing:3px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.toUpperCase()"/>
           </div>
-          <p id="grupo-nombre" style="font-size:0.78rem;color:var(--green);min-height:20px;margin-bottom:14px;padding-left:2px;font-weight:600;"></p>
+          <p id="grupo-nombre" style="font-size:0.78rem;color:var(--green);min-height:20px;margin-bottom:4px;padding-left:2px;font-weight:600;"></p>
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">PIN <span style="font-size:0.62rem;font-weight:400;text-transform:none;letter-spacing:0;">(4 dígitos — para proteger tu cuenta)</span></label>
+            <input type="password" id="pin-input" class="input-field" placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" autocomplete="current-password" style="width:100%;letter-spacing:6px;font-size:1.2rem;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"/>
+          </div>
           <button id="btn-unirse" onclick="registrarse()" style="width:100%;padding:17px;background:linear-gradient(135deg,#7a5500,#c9a84c,#f0c830,#c9a84c);border:none;border-radius:14px;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:4px;color:#000;font-weight:900;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 32px rgba(201,168,76,0.28),0 0 0 1px rgba(201,168,76,0.15);" onmouseover="this.style.boxShadow='0 6px 44px rgba(201,168,76,0.55),0 0 0 1px rgba(201,168,76,0.35)';this.style.transform='translateY(-1px)'" onmouseout="this.style.boxShadow='0 4px 32px rgba(201,168,76,0.28),0 0 0 1px rgba(201,168,76,0.15)';this.style.transform='translateY(0)'" onmousedown="this.style.transform='scale(0.98)'">
             ENTRAR AL MUNDIAL
           </button>
@@ -581,60 +585,77 @@
       }
     }
 
+    function sesionLocal(p) {
+      localStorage.setItem('mundial_user_id', p.id);
+      localStorage.setItem('mundial_user_nombre', p.nombre);
+      localStorage.setItem('mundial_user_grupo', p.grupo);
+      localStorage.setItem('mundial_user_admin', p.es_admin ? 'true' : 'false');
+      usuarioActual = p;
+      if (p.estado === 'rechazado') { mostrarRechazado(); return; }
+      if (p.estado === 'pendiente')  { mostrarPendiente(); return; }
+      mostrarBienvenida(p);
+    }
+
     async function registrarse() {
       const input    = document.getElementById('nombre-input');
       const codInput = document.getElementById('codigo-input');
+      const pinInput = document.getElementById('pin-input');
       const nombre   = input.value.trim();
       const codigo   = codInput.value.trim().toUpperCase();
+      const pin      = pinInput.value.trim();
       const errorEl  = document.getElementById('registro-error');
       const btn      = document.getElementById('btn-unirse');
 
       errorEl.classList.add('hidden');
+      errorEl.innerHTML = '';
 
       if (!nombre || nombre.length < 2) {
-        errorEl.textContent = 'Por favor entra un nombre de al menos 2 caracteres';
-        errorEl.classList.remove('hidden');
-        return;
+        errorEl.textContent = 'Por favor entra un nombre de al menos 2 caracteres.';
+        errorEl.classList.remove('hidden'); return;
       }
-
       const grupoNombre = GRUPOS[codigo];
       if (!grupoNombre) {
         errorEl.textContent = 'Código de grupo incorrecto. Pídelo al organizador.';
-        errorEl.classList.remove('hidden');
-        return;
+        errorEl.classList.remove('hidden'); return;
+      }
+      if (!pin || pin.length !== 4) {
+        errorEl.textContent = 'El PIN debe ser de exactamente 4 dígitos.';
+        errorEl.classList.remove('hidden'); return;
       }
 
       btn.disabled = true;
       btn.textContent = 'Verificando...';
 
       try {
-        // Verificar nombre duplicado
         const existentes = await db.getTodosParticipantes();
         const duplicado = existentes.find(p => p.nombre.trim().toLowerCase() === nombre.toLowerCase());
+
         if (duplicado) {
-          errorEl.textContent = `Ya existe alguien con el nombre "${duplicado.nombre}". Por favor elige otro nombre.`;
-          errorEl.classList.remove('hidden');
-          btn.disabled = false;
-          btn.textContent = 'Unirme a la polla';
-          return;
+          // Cuenta existente → verificar PIN
+          if (!duplicado.pin) {
+            // Sin PIN todavía (cuenta antes de esta feature) → asignar este PIN
+            await db.setPin(duplicado.id, pin);
+            sesionLocal({ ...duplicado, pin });
+            return;
+          }
+          if (duplicado.pin !== pin) {
+            errorEl.textContent = 'PIN incorrecto. Si olvidaste tu PIN, contacta al organizador.';
+            errorEl.classList.remove('hidden');
+            btn.disabled = false; btn.textContent = 'ENTRAR AL MUNDIAL'; return;
+          }
+          sesionLocal(duplicado); return;
         }
 
+        // Nombre nuevo → registrar con PIN
         btn.textContent = 'Uniéndome...';
-        const participante = await db.registrar(nombre, grupoNombre);
-        localStorage.setItem('mundial_user_id', participante.id);
-        localStorage.setItem('mundial_user_nombre', participante.nombre);
-        localStorage.setItem('mundial_user_grupo', participante.grupo);
-        localStorage.setItem('mundial_user_admin', participante.es_admin ? 'true' : 'false');
-        usuarioActual = participante;
-        if (participante.estado === 'rechazado') { mostrarRechazado(); return; }
-        if (participante.estado === 'pendiente')  { mostrarPendiente(); return; }
-        mostrarBienvenida(participante);
+        const participante = await db.registrar(nombre, grupoNombre, pin);
+        sesionLocal(participante);
       } catch (e) {
         console.error(e);
-        errorEl.textContent = 'Error al registrarse. Comprueba tu conexión.';
+        errorEl.textContent = 'Error al conectar. Comprueba tu conexión.';
         errorEl.classList.remove('hidden');
         btn.disabled = false;
-        btn.textContent = 'Entrar';
+        btn.textContent = 'ENTRAR AL MUNDIAL';
       }
     }
 
