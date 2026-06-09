@@ -200,7 +200,7 @@ def main():
     grupo_st    = {}
 
     for letra in letras:
-        matches = por_grupo[letra]
+        matches = sorted(por_grupo[letra], key=lambda m: (m.get('fecha') or '9999', m.get('hora') or '99:99'))
 
         ws.merge_cells(f'A{fila}:J{fila}')
         c = ws.cell(fila, 1, f'  GRUPO {letra}')

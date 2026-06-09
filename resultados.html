@@ -166,7 +166,9 @@
       const c = document.getElementById('contenido-grupo');
       if (!c) return;
 
-      const partidos = todosPartidos.filter(p => p.fase === 'grupos' && p.grupo === grupo);
+      const partidos = todosPartidos
+        .filter(p => p.fase === 'grupos' && p.grupo === grupo)
+        .sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1);
       const equiposGrupo = todosEquipos.filter(e => e.grupo === grupo).map(e => e.nombre);
       const clasificacion = bracket.calcularClasificacionGrupo(equiposGrupo, partidos);
 
@@ -273,19 +275,66 @@
       const fV = getFlag(p.equipo_visitante);
       const esTBD = p.equipo_local.startsWith('[') || p.equipo_visitante.startsWith('[') || p.equipo_local === 'Por definir';
       const fechaHora = formatFechaHora(p);
+      const esEliminatoria = p.fase && p.fase !== 'grupos';
+
+      if (esTBD) {
+        return `
+          <div class="match-card animate-in" id="card-${p.id}">
+            ${fechaHora ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:6px;text-transform:capitalize;">${fechaHora}</div>` : ''}
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="flex:1; text-align:right; font-weight:600; font-size:0.88rem; line-height:1.3; color:var(--text-muted);">${fL} ${escH(p.equipo_local)}</div>
+              <div style="display:flex; gap:4px; flex-shrink:0;">
+                <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:8px;font-weight:300;font-size:1.2rem;color:var(--text-dim);">–</div>
+                <div style="display:flex;align-items:center;padding:0 2px;color:var(--text-dim);">–</div>
+                <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:8px;font-weight:300;font-size:1.2rem;color:var(--text-dim);">–</div>
+              </div>
+              <div style="flex:1; font-weight:600; font-size:0.88rem; line-height:1.3; color:var(--text-muted);">${fV} ${escH(p.equipo_visitante)}</div>
+            </div>
+            <p style="text-align:center;font-size:0.72rem;color:var(--text-muted);margin-top:8px;">Resultado pendiente</p>
+          </div>`;
+      }
+
+      const penaltisHtml = esEliminatoria ? `
+        <div id="penaltis-${p.id}" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;text-align:center;">Empate — ¿quién gana en penaltis?</p>
+          <input type="hidden" id="pen-ganador-${p.id}" value="">
+          <div style="display:flex; gap:8px;">
+            <button onclick="seleccionarPenaltis(${p.id}, 'local')"
+              id="pen-btn-local-${p.id}"
+              data-equipo="${escH(p.equipo_local)}"
+              style="flex:1;font-size:0.78rem;padding:8px 4px;background:var(--surface3);border:2px solid transparent;border-radius:8px;cursor:pointer;color:var(--text);">
+              ${fL} ${escH(p.equipo_local)}
+            </button>
+            <button onclick="seleccionarPenaltis(${p.id}, 'visitante')"
+              id="pen-btn-vis-${p.id}"
+              data-equipo="${escH(p.equipo_visitante)}"
+              style="flex:1;font-size:0.78rem;padding:8px 4px;background:var(--surface3);border:2px solid transparent;border-radius:8px;cursor:pointer;color:var(--text);">
+              ${fV} ${escH(p.equipo_visitante)}
+            </button>
+          </div>
+        </div>` : '';
+
       return `
         <div class="match-card animate-in" id="card-${p.id}">
           ${fechaHora ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:6px;text-transform:capitalize;">${fechaHora}</div>` : ''}
           <div style="display:flex; align-items:center; gap:8px;">
-            <div style="flex:1; text-align:right; font-weight:600; font-size:0.88rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fL} ${escH(p.equipo_local)}</div>
+            <div style="flex:1; text-align:right; font-weight:600; font-size:0.88rem; line-height:1.3;">${fL} ${escH(p.equipo_local)}</div>
             <div style="display:flex; gap:4px; flex-shrink:0;">
-              <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:8px;font-weight:300;font-size:1.2rem;color:var(--text-dim);">–</div>
-              <div style="display:flex;align-items:center;padding:0 2px;color:var(--text-dim);">–</div>
-              <div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:8px;font-weight:300;font-size:1.2rem;color:var(--text-dim);">–</div>
+              <input type="number" id="res-local-${p.id}" min="0" max="99" placeholder="0"
+                oninput="checkEmpateKnockout(${p.id}, ${esEliminatoria})"
+                style="width:44px;height:44px;text-align:center;background:var(--surface3);border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:1.1rem;color:var(--text);">
+              <div style="display:flex;align-items:center;padding:0 2px;color:var(--text-dim);font-weight:300;">–</div>
+              <input type="number" id="res-vis-${p.id}" min="0" max="99" placeholder="0"
+                oninput="checkEmpateKnockout(${p.id}, ${esEliminatoria})"
+                style="width:44px;height:44px;text-align:center;background:var(--surface3);border:1px solid var(--border);border-radius:8px;font-weight:700;font-size:1.1rem;color:var(--text);">
             </div>
-            <div style="flex:1; font-weight:600; font-size:0.88rem; line-height:1.3; color:${esTBD?'var(--text-muted)':'var(--text)'};">${fV} ${escH(p.equipo_visitante)}</div>
+            <div style="flex:1; font-weight:600; font-size:0.88rem; line-height:1.3;">${fV} ${escH(p.equipo_visitante)}</div>
           </div>
-          <p style="text-align:center;font-size:0.72rem;color:var(--text-muted);margin-top:8px;">Resultado pendiente</p>
+          ${penaltisHtml}
+          <button onclick="guardarResultado(${p.id})"
+            style="margin-top:12px;width:100%;padding:10px;background:var(--surface3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.82rem;color:var(--text);">
+            Guardar resultado
+          </button>
         </div>`;
     }
 
@@ -318,6 +367,10 @@
           }).join('')}
         </div>` : '';
 
+      const penaltisLabel = (gl === gv && p.ganador_penaltis)
+        ? `<div style="text-align:center;font-size:0.7rem;color:var(--gold-light);margin-top:4px;">Penaltis: ${escH(p.ganador_penaltis)}</div>`
+        : '';
+
       return `
         <div class="match-card jugado animate-in">
           <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -333,6 +386,7 @@
             </div>
             <div style="flex:1; font-weight:700; font-size:0.88rem; ${ganadorVis?'color:var(--gold-light);':''}">${fV} ${escH(p.equipo_visitante)}</div>
           </div>
+          ${penaltisLabel}
           ${tablaPreds}
         </div>`;
     }
@@ -353,11 +407,28 @@
         mostrarToast('Marcadores inválidos'); return;
       }
 
-      const btn = document.querySelector(`#card-${partidoId} button`);
+      const partido = todosPartidos.find(p => p.id === partidoId);
+      const esEliminatoria = partido && partido.fase !== 'grupos';
+
+      // Si hay empate en eliminatoria, exigir ganador de penaltis
+      let ganadorPenaltis = null;
+      if (esEliminatoria && gl === gv) {
+        const penInput = document.getElementById(`pen-ganador-${partidoId}`);
+        if (!penInput || !penInput.value) {
+          mostrarToast('Empate: selecciona quién gana en penaltis');
+          // Asegurarse de que el selector sea visible
+          const penDiv = document.getElementById(`penaltis-${partidoId}`);
+          if (penDiv) penDiv.style.display = 'block';
+          return;
+        }
+        ganadorPenaltis = penInput.value;
+      }
+
+      const btn = document.querySelector(`#card-${partidoId} button[onclick^="guardar"]`);
       if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
 
       try {
-        const actualizado = await db.guardarResultado(partidoId, gl, gv);
+        const actualizado = await db.guardarResultado(partidoId, gl, gv, ganadorPenaltis);
 
         // Actualizar array local
         const idx = todosPartidos.findIndex(p => p.id === partidoId);
@@ -376,22 +447,81 @@
       } catch(e) {
         console.error(e);
         mostrarToast('Error al guardar');
-        if (btn) { btn.disabled = false; btn.textContent = '✅ Guardar resultado'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Guardar resultado'; }
+      }
+    }
+
+    function checkEmpateKnockout(partidoId, esEliminatoria) {
+      if (!esEliminatoria) return;
+      const lInput = document.getElementById(`res-local-${partidoId}`);
+      const vInput = document.getElementById(`res-vis-${partidoId}`);
+      const penDiv = document.getElementById(`penaltis-${partidoId}`);
+      if (!lInput || !vInput || !penDiv) return;
+      const gl = parseInt(lInput.value);
+      const gv = parseInt(vInput.value);
+      if (!isNaN(gl) && !isNaN(gv) && gl === gv) {
+        penDiv.style.display = 'block';
+      } else {
+        penDiv.style.display = 'none';
+        const penInput = document.getElementById(`pen-ganador-${partidoId}`);
+        if (penInput) penInput.value = '';
+        // Quitar selección visual de botones
+        const btnL = document.getElementById(`pen-btn-local-${partidoId}`);
+        const btnV = document.getElementById(`pen-btn-vis-${partidoId}`);
+        if (btnL) btnL.style.borderColor = 'transparent';
+        if (btnV) btnV.style.borderColor = 'transparent';
+      }
+    }
+
+    function seleccionarPenaltis(partidoId, lado) {
+      const penInput = document.getElementById(`pen-ganador-${partidoId}`);
+      const btnL = document.getElementById(`pen-btn-local-${partidoId}`);
+      const btnV = document.getElementById(`pen-btn-vis-${partidoId}`);
+      if (!penInput || !btnL || !btnV) return;
+      if (lado === 'local') {
+        penInput.value = btnL.dataset.equipo;
+        btnL.style.borderColor = 'var(--gold)';
+        btnV.style.borderColor = 'transparent';
+      } else {
+        penInput.value = btnV.dataset.equipo;
+        btnV.style.borderColor = 'var(--gold)';
+        btnL.style.borderColor = 'transparent';
       }
     }
 
     async function editarResultado(partidoId) {
       const partido = todosPartidos.find(p => p.id === partidoId);
       if (!partido) return;
-      const gl = prompt(`${partido.equipo_local} - Goles:`, partido.goles_local);
-      if (gl === null) return;
-      const gv = prompt(`${partido.equipo_visitante} - Goles:`, partido.goles_visitante);
-      if (gv === null) return;
-      if (isNaN(parseInt(gl)) || isNaN(parseInt(gv))) { mostrarToast('Números inválidos'); return; }
+      const glStr = prompt(`${partido.equipo_local} - Goles:`, partido.goles_local);
+      if (glStr === null) return;
+      const gvStr = prompt(`${partido.equipo_visitante} - Goles:`, partido.goles_visitante);
+      if (gvStr === null) return;
+      const gl = parseInt(glStr);
+      const gv = parseInt(gvStr);
+      if (isNaN(gl) || isNaN(gv)) { mostrarToast('Números inválidos'); return; }
+
+      let ganadorPenaltis = partido.ganador_penaltis || null;
+      const esEliminatoria = partido.fase !== 'grupos';
+      if (esEliminatoria && gl === gv) {
+        const opciones = `${partido.equipo_local} o ${partido.equipo_visitante}`;
+        const seleccion = prompt(`Empate — ¿quién ganó en penaltis?\n${opciones}`, ganadorPenaltis || partido.equipo_local);
+        if (seleccion === null) return;
+        if (seleccion !== partido.equipo_local && seleccion !== partido.equipo_visitante) {
+          mostrarToast('Equipo no válido'); return;
+        }
+        ganadorPenaltis = seleccion;
+      } else {
+        ganadorPenaltis = null;
+      }
+
       try {
-        const actualizado = await db.guardarResultado(partidoId, parseInt(gl), parseInt(gv));
+        const actualizado = await db.guardarResultado(partidoId, gl, gv, ganadorPenaltis);
         const idx = todosPartidos.findIndex(p => p.id === partidoId);
         if (idx !== -1) todosPartidos[idx] = actualizado;
+        if (esEliminatoria) {
+          await bracket.propagarGanador(actualizado);
+          todosPartidos = await db.getTodosPartidos();
+        }
         mostrarToast('✅ Resultado actualizado');
         renderFase(faseActual);
       } catch(e) { mostrarToast('Error al actualizar'); }

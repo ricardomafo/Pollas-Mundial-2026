@@ -531,7 +531,9 @@
       grupoActual = grupo;
       const c = document.getElementById('contenido-grupo');
       if (!c) return;
-      const partidos = todosPartidos.filter(p => p.fase === 'grupos' && p.grupo === grupo);
+      const partidos = todosPartidos
+        .filter(p => p.fase === 'grupos' && p.grupo === grupo)
+        .sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1);
       c.innerHTML = partidos.map(p => renderCardPartido(p, p.equipo_local, p.equipo_visitante)).join('');
       // Rellenar predicciones guardadas
       partidos.forEach(p => {

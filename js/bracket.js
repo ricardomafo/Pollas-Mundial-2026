@@ -259,7 +259,16 @@ window.bracket = {
     const gv = parseInt(partido.goles_visitante);
     if (isNaN(gl) || isNaN(gv)) return;
 
-    const ganador = gl > gv ? partido.equipo_local : partido.equipo_visitante;
+    // Si hay empate, se NECESITA ganador_penaltis antes de propagar
+    if (gl === gv) {
+      if (!partido.ganador_penaltis) return; // bloquear hasta que se registren penaltis
+    }
+
+    const ganador = gl !== gv
+      ? (gl > gv ? partido.equipo_local : partido.equipo_visitante)
+      : partido.ganador_penaltis;
+
+    const perdedor = ganador === partido.equipo_local ? partido.equipo_visitante : partido.equipo_local;
 
     // Buscar en R16
     const r16 = this.R16_ESTRUCTURA.find(m => m.from.includes(label));
@@ -281,9 +290,7 @@ window.bracket = {
     const sf = this.SF_ESTRUCTURA.find(m => m.from.includes(label));
     if (sf) {
       const slot = sf.from.indexOf(label) === 0 ? 'local' : 'visitante';
-      // Ganador va a Final, perdedor va a 3er puesto
       await db.actualizarEquipoEnPartido('Final', slot, ganador);
-      const perdedor = gl > gv ? partido.equipo_visitante : partido.equipo_local;
       await db.actualizarEquipoEnPartido('3er Puesto', slot, perdedor);
     }
   }

@@ -136,15 +136,21 @@ window.db = {
   /**
    * Guarda el resultado real de un partido
    */
-  async guardarResultado(partidoId, golesLocal, golesVisitante) {
+  async guardarResultado(partidoId, golesLocal, golesVisitante, ganadorPenaltis = null) {
+    const update = {
+      goles_local: parseInt(golesLocal),
+      goles_visitante: parseInt(golesVisitante),
+      jugado: true,
+      fecha: new Date().toISOString().split('T')[0]
+    };
+    if (ganadorPenaltis !== null) {
+      update.ganador_penaltis = ganadorPenaltis;
+    } else {
+      update.ganador_penaltis = null;
+    }
     const { data, error } = await supabaseClient
       .from('partidos')
-      .update({
-        goles_local: parseInt(golesLocal),
-        goles_visitante: parseInt(golesVisitante),
-        jugado: true,
-        fecha: new Date().toISOString().split('T')[0]
-      })
+      .update(update)
       .eq('id', partidoId)
       .select()
       .single();
