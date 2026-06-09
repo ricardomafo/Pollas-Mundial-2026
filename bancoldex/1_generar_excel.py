@@ -257,13 +257,22 @@ def main():
             [m['equipo_visitante'] for m in matches]
         ))[:4]
         mf = {m['id']: match_filas[m['id']] for m in matches}
-        grupo_st[letra] = fila
+        comp_start = fila
+        grupo_st[letra] = comp_start  # usado por f_pos_grupo y bracket
 
+        # Rangos de las filas de cálculo (ocultas)
+        sc_comp   = f'{col(C_ST_SC)}{comp_start}:{col(C_ST_SC)}{comp_start+3}'
+        rk_comp   = f'{col(C_ST_RK)}{comp_start}:{col(C_ST_RK)}{comp_start+3}'
+        eq_comp   = f'{col(C_ST_EQ)}{comp_start}:{col(C_ST_EQ)}{comp_start+3}'
+        pts_comp  = f'{col(C_ST_PTS)}{comp_start}:{col(C_ST_PTS)}{comp_start+3}'
+        gf_comp   = f'{col(C_ST_GF)}{comp_start}:{col(C_ST_GF)}{comp_start+3}'
+        gc_comp   = f'{col(C_ST_GC)}{comp_start}:{col(C_ST_GC)}{comp_start+3}'
+        dg_comp   = f'{col(C_ST_DG)}{comp_start}:{col(C_ST_DG)}{comp_start+3}'
+
+        # ── Filas de cálculo (ocultas) ────────────────────────────────────────
         for eq_idx, eq in enumerate(equipos):
-            st = fila + eq_idx
-            c = ws.cell(st, C_ST_EQ, eq)
-            c.font = font(size=9, bold=True); c.fill = fill(GRIS1)
-            c.alignment = alin('left'); c.border = borde()
+            st = comp_start + eq_idx
+            ws.cell(st, C_ST_EQ, eq)  # nombre fijo del equipo
 
             cl = [m for m in matches if m['equipo_local']     == eq]
             cv = [m for m in matches if m['equipo_visitante'] == eq]
@@ -301,19 +310,12 @@ def main():
             ws.cell(st, C_ST_GC ).value = '=' + '+'.join(partes_gc)
             ws.cell(st, C_ST_DG ).value = f'={gf_f}-{gc_f}'
 
-            # Si el usuario llenó el desempate fairplay, usarlo como tiebreaker final
             score = (f'IF(ISNUMBER({fp_f}),'
                      f'{pts_f}*10000+{dg_f}*100+{gf_f}+(1-{fp_f}/10000),'
                      f'{pts_f}*10000+{dg_f}*100+{gf_f}+{(eq_idx+1)*0.001:.3f})')
             ws.cell(st, C_ST_SC).value = f'={score}'
             ws.cell(st, C_ST_SC).font  = font(size=8, color='aaaaaa')
 
-            for cx in [C_ST_PTS, C_ST_GF, C_ST_GC, C_ST_DG]:
-                ws.cell(st, cx).fill      = fill(GRIS1)
-                ws.cell(st, cx).alignment = alin()
-                ws.cell(st, cx).border    = borde()
-
-            # Celda de desempate fairplay
             fp_cell = ws.cell(st, C_FP)
             fp_cell.fill = fill('ede7f6'); fp_cell.alignment = alin()
             fp_cell.border = borde('ce93d8')
@@ -321,35 +323,58 @@ def main():
             fp_cell.protection = Protection(locked=False)
             fp_refs.append(fp_f)
 
-            ws.row_dimensions[st].height = 17
+            ws.row_dimensions[st].height = 3  # fila de cálculo oculta
 
-        score_range_full = f'{col(C_ST_SC)}{fila}:{col(C_ST_SC)}{fila+3}'
         for eq_idx in range(4):
-            st = fila + eq_idx
+            st = comp_start + eq_idx
             sc = ref(st, C_ST_SC)
-            ws.cell(st, C_ST_RK).value = f'=RANK({sc},{score_range_full},0)'
+            ws.cell(st, C_ST_RK).value = f'=RANK({sc},{sc_comp},0)'
             ws.cell(st, C_ST_RK).font  = font(size=8, color='aaaaaa')
 
-        # ── Formato condicional por rank ──────────────────────────────────────
-        rng_cf  = f'K{fila}:O{fila+3}'
-        q_letra = col(C_ST_RK)
-        l_letra = col(C_ST_PTS)
-        has_preds = f'SUM(${l_letra}${fila}:${l_letra}${fila+3})>0'
+        fila += 4
 
-        ws.conditional_formatting.add(rng_cf, FormulaRule(
-            formula=[f'AND(${q_letra}{fila}<=2,{has_preds})'],
-            fill=PatternFill('solid', fgColor='c8e6c9'),
-            font=Font(bold=True, color='1b5e20', name='Calibri')
-        ))
-        ws.conditional_formatting.add(rng_cf, FormulaRule(
-            formula=[f'AND(${q_letra}{fila}=3,{has_preds})'],
-            fill=PatternFill('solid', fgColor='bbdefb'),
-            font=Font(bold=True, color='0d47a1', name='Calibri')
-        ))
-        ws.conditional_formatting.add(rng_cf, FormulaRule(
-            formula=[f'AND(${q_letra}{fila}=4,{has_preds})'],
-            fill=PatternFill('solid', fgColor='ffcdd2'),
-            font=Font(color='c62828', name='Calibri')
+        # ── Filas de visualización ordenadas por posición ─────────────────────
+        COLORES_POS = [
+            ('c8e6c9', '1b5e20', True),   # 1°  verde oscuro
+            ('c8e6c9', '1b5e20', True),   # 2°  verde oscuro
+            ('bbdefb', '0d47a1', True),   # 3°  azul
+            ('ffcdd2', 'c62828', False),  # 4°  rojo
+        ]
+        pts_col = col(C_ST_PTS)
+        pts_sum = f'SUM(${pts_col}${comp_start}:${pts_col}${comp_start+3})'  # absoluto p/formato condicional
+
+        for pos in range(4):
+            dr = fila + pos
+            rank_val = pos + 1
+            bg_pos, fg_pos, bold_pos = COLORES_POS[pos]
+
+            # Fórmulas que buscan el equipo con rank = rank_val
+            eq_f  = f'=IFERROR(INDEX({eq_comp},MATCH({rank_val},{rk_comp},0)),"")'
+            pts_f2= f'=IFERROR(INDEX({pts_comp},MATCH({rank_val},{rk_comp},0)),"")'
+            gf_f2 = f'=IFERROR(INDEX({gf_comp},MATCH({rank_val},{rk_comp},0)),"")'
+            gc_f2 = f'=IFERROR(INDEX({gc_comp},MATCH({rank_val},{rk_comp},0)),"")'
+            dg_f2 = f'=IFERROR(INDEX({dg_comp},MATCH({rank_val},{rk_comp},0)),"")'
+
+            vals = [(C_ST_EQ, eq_f, alin('left')),
+                    (C_ST_PTS, pts_f2, alin()),
+                    (C_ST_GF,  gf_f2, alin()),
+                    (C_ST_GC,  gc_f2, alin()),
+                    (C_ST_DG,  dg_f2, alin())]
+
+            for cx, val, al in vals:
+                c = ws.cell(dr, cx, val)
+                c.fill = fill(bg_pos)
+                c.font = font(size=9, bold=bold_pos, color=fg_pos)
+                c.alignment = al; c.border = borde()
+
+            ws.row_dimensions[dr].height = 17
+
+        # Formato condicional: gris neutro cuando aún no hay predicciones
+        rng_disp = f'K{fila}:O{fila+3}'
+        ws.conditional_formatting.add(rng_disp, FormulaRule(
+            formula=[f'{pts_sum}=0'],
+            fill=PatternFill('solid', fgColor=GRIS1),
+            font=Font(color='555555', name='Calibri')
         ))
 
         fila += 4 + 1
