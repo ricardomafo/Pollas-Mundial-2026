@@ -368,16 +368,33 @@
     // Mapa global de predicciones de todos los participantes por partido
     let todasPredsPartido = {};
 
-    function expandirPartidos() {
-      const resto = (window._todosPartidos || []).slice(5);
+    async function expandirPartidos() {
+      const resto = window._todosPartidos || [];
       if (!resto.length) return;
       const btn = document.getElementById('btn-ver-mas');
       if (btn) btn.remove();
       const container = document.getElementById('extra-partidos');
       if (!container) return;
-      container.style.display = 'block';
+
+      const userGrupo = localStorage.getItem('mundial_user_grupo');
+      const ids = resto.map(p => p.id);
+      let todasPredsExtra = {};
+      try {
+        const prds = await db.getPrediccionesDePartidos(ids);
+        for (const pr of prds) {
+          if (!pr.participantes) continue;
+          if (userGrupo && pr.participantes.grupo !== userGrupo) continue;
+          if (!todasPredsExtra[pr.partido_id]) todasPredsExtra[pr.partido_id] = [];
+          todasPredsExtra[pr.partido_id].push({ nombre: pr.participantes.nombre, gl: pr.goles_local, gv: pr.goles_visitante });
+        }
+        for (const id of ids) {
+          if (todasPredsExtra[id]) todasPredsExtra[id].sort((a,b) => a.nombre.localeCompare(b.nombre));
+        }
+      } catch(e) { console.error(e); }
+
       container.innerHTML = resto.map(function(p) {
         const pred = (window._misPreds || {})[p.id];
+        const jugado = p.jugado;
         const fL = getFlag(p.equipo_local);
         const fV = getFlag(p.equipo_visitante);
         const fechaLabel = p.fecha
@@ -387,21 +404,26 @@
         const infoFecha = fechaLabel
           ? '<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:5px;text-transform:capitalize;">' + fechaLabel + (horaLabel ? ' · ' + horaLabel : '') + ' · Grupo ' + (p.grupo||'') + '</div>'
           : '';
+        const resultadoHtml = jugado
+          ? '<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;"><div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;font-weight:800;' + (p.goles_local > p.goles_visitante ? 'border:1px solid var(--gold);color:var(--gold-light);' : 'color:var(--text);') + '">' + p.goles_local + '</div><span style="color:var(--text-dim);font-size:0.8rem;padding:0 1px;">–</span><div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;font-weight:800;' + (p.goles_visitante > p.goles_local ? 'border:1px solid var(--gold);color:var(--gold-light);' : 'color:var(--text);') + '">' + p.goles_visitante + '</div></div>'
+          : '<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;"><div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;color:var(--text-dim);font-weight:300;">–</div><span style="color:var(--text-dim);font-size:0.8rem;padding:0 1px;">–</span><div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;color:var(--text-dim);font-weight:300;">–</div></div>';
         const predHtml = pred
-          ? '<div style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.72rem;color:var(--text-muted);">Tu prediccion: <strong style="color:var(--gold-light);">' + pred.goles_local + ' - ' + pred.goles_visitante + '</strong></div>'
-          : '<div style="margin-top:6px;text-align:center;font-size:0.72rem;color:var(--text-muted);">Sin prediccion</div>';
+          ? '<div style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.72rem;color:var(--text-muted);">Tu predicción: <strong style="color:var(--gold-light);">' + pred.goles_local + ' – ' + pred.goles_visitante + '</strong></div>'
+          : '<div style="margin-top:6px;text-align:center;font-size:0.72rem;color:var(--text-muted);">Sin predicción</div>';
+        const grupoList = todasPredsExtra[p.id] || [];
+        const grupoHtml = grupoList.length > 0
+          ? grupoList.map(pr => '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);"><span style="font-size:0.78rem;color:var(--text);">' + escapeHtml(pr.nombre) + '</span><span style="font-size:0.82rem;font-weight:700;color:var(--text);">' + pr.gl + ' – ' + pr.gv + '</span></div>').join('')
+          : '<p style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:8px 0;">Nadie ha predicho este partido aún</p>';
         return '<div style="padding:10px 0;border-bottom:1px solid var(--border);" class="animate-in">'
           + infoFecha
           + '<div style="display:flex;align-items:center;gap:6px;">'
           + '<div style="flex:1;text-align:right;font-size:0.82rem;font-weight:600;">' + fL + ' ' + escapeHtml(p.equipo_local) + '</div>'
-          + '<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;">'
-          + '<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;color:var(--text-dim);font-weight:300;">-</div>'
-          + '<span style="color:var(--text-dim);font-size:0.8rem;padding:0 1px;">-</span>'
-          + '<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface3);border-radius:6px;color:var(--text-dim);font-weight:300;">-</div>'
-          + '</div>'
+          + resultadoHtml
           + '<div style="flex:1;font-size:0.82rem;font-weight:600;">' + fV + ' ' + escapeHtml(p.equipo_visitante) + '</div>'
           + '</div>'
           + predHtml
+          + '<div style="margin-top:6px;text-align:center;"><button id="btn_pred_x' + p.id + '" onclick="togglePredsPartido(\'pred_x' + p.id + '\')" style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;cursor:pointer;padding:2px 0;">Ver predicciones del grupo ▾</button></div>'
+          + '<div id="pred_x' + p.id + '" style="display:none;margin-top:6px;background:var(--surface3);border-radius:8px;padding:6px 10px;">' + grupoHtml + '</div>'
           + '</div>';
       }).join('');
     }
@@ -449,34 +471,40 @@
           return f.getTime() === hoy.getTime();
         });
 
-        let mostrar = hoyPartidos;
-        let labelTitulo = 'Partidos de hoy';
-
-        if (mostrar.length === 0) {
-          mostrar = grupos.filter(p => !p.jugado).slice(0, 5);
-          window._todosPartidos = grupos.filter(p => !p.jugado);
-          labelTitulo = 'Próximos partidos';
+        let candidatos, labelTitulo;
+        if (hoyPartidos.length > 0) {
+          candidatos = hoyPartidos;
+          labelTitulo = 'Partidos de hoy';
+        } else {
+          const proximos = grupos.filter(p => !p.jugado);
+          if (proximos.length > 0) {
+            candidatos = proximos;
+            labelTitulo = 'Próximos partidos';
+          } else {
+            candidatos = [...grupos].reverse();
+            labelTitulo = 'Últimos resultados';
+          }
         }
 
-        if (mostrar.length === 0) {
-          mostrar = grupos.filter(p => p.jugado).reverse().slice(0, 5);
-          labelTitulo = 'Últimos resultados';
-        }
+        const mostrar = candidatos.slice(0, 5);
+        const mostrarIds = new Set(mostrar.map(p => p.id));
+        window._todosPartidos = candidatos.filter(p => !mostrarIds.has(p.id));
 
         titulo.textContent = labelTitulo;
 
-        // Verificar si el usuario ha predicho TODOS los 104 partidos
+        // Para fase de grupos: siempre mostrar predicciones de todos
+        // Para eliminatorias: solo si completó todos sus partidos
         const misPredsTotal = partidos.filter(p => misPreds[p.id]).length;
-        const todosPredichos = misPredsTotal >= partidos.length && partidos.length > 0;
+        const todosPredichos = true; // fase de grupos: siempre visible
 
         if (mostrar.length === 0) {
           container.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:12px 0;">El Mundial empieza el 11 de junio de 2026</p>`;
           return;
         }
 
-        // Cargar predicciones del grupo solo si el usuario ya completó las suyas
+        // Cargar predicciones del grupo (solo partidos de fase de grupos mostrados aquí)
         const ids = mostrar.map(p => p.id);
-        const todasPreds = todosPredichos ? await db.getPrediccionesDePartidos(ids) : [];
+        const todasPreds = await db.getPrediccionesDePartidos(ids);
         todasPredsPartido = {};
         for (const pr of todasPreds) {
           if (!pr.participantes) continue;
@@ -561,26 +589,20 @@
               </div>
               ${predHtml}
               <div style="margin-top:6px;text-align:center;">
-                ${todosPredichos
-                  ? `<button id="btn_pred_${p.id}" onclick="togglePredsPartido('pred_${p.id}')"
-                      style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;cursor:pointer;padding:2px 0;">
-                      Ver predicciones del grupo ▾
-                    </button>`
-                  : `<span style="font-size:0.7rem;color:var(--text-muted);">
-                      🔒 Completa tus ${partidos.length - misPredsTotal} predicciones restantes para ver las de los demás
-                    </span>`
-                }
+                <button id="btn_pred_${p.id}" onclick="togglePredsPartido('pred_${p.id}')"
+                    style="background:none;border:none;color:var(--text-muted);font-size:0.7rem;cursor:pointer;padding:2px 0;">
+                    Ver predicciones del grupo ▾
+                  </button>
               </div>
-              ${todosPredichos ? `
               <div id="pred_${p.id}" style="display:none;margin-top:6px;background:var(--surface3);border-radius:8px;padding:6px 10px;">
                 ${grupoHtml}
-              </div>` : ''}
+              </div>
             </div>`;
-        }).join('') + (window._todosPartidos && window._todosPartidos.length > 5 ? `
+        }).join('') + (window._todosPartidos && window._todosPartidos.length > 0 ? `
           <button id="btn-ver-mas" onclick="expandirPartidos()" style="width:100%;margin-top:10px;padding:10px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--text-muted);font-size:0.8rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
-            Ver ${window._todosPartidos.length - 5} partidos más ▾
+            Ver ${window._todosPartidos.length} partidos más ▾
           </button>
-          <div id="extra-partidos" style="display:none;"></div>
+          <div id="extra-partidos"></div>
         ` : '');
 
       } catch(e) {
