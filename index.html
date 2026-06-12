@@ -471,24 +471,25 @@
           return f.getTime() === hoy.getTime();
         });
 
-        let candidatos, labelTitulo;
-        if (hoyPartidos.length > 0) {
-          candidatos = hoyPartidos;
-          labelTitulo = 'Partidos de hoy';
-        } else {
-          const proximos = grupos.filter(p => !p.jugado);
-          if (proximos.length > 0) {
-            candidatos = proximos;
-            labelTitulo = 'Próximos partidos';
-          } else {
-            candidatos = [...grupos].reverse();
-            labelTitulo = 'Últimos resultados';
-          }
-        }
+        let mostrar, labelTitulo;
+        const proximos = grupos.filter(p => !p.jugado);
 
-        const mostrar = candidatos.slice(0, 5);
-        const mostrarIds = new Set(mostrar.map(p => p.id));
-        window._todosPartidos = candidatos.filter(p => !mostrarIds.has(p.id));
+        if (hoyPartidos.length > 0) {
+          mostrar = hoyPartidos;
+          labelTitulo = 'Partidos de hoy';
+          // Ver más = próximos que no sean de hoy
+          const hoyIds = new Set(hoyPartidos.map(p => p.id));
+          window._todosPartidos = proximos.filter(p => !hoyIds.has(p.id));
+        } else if (proximos.length > 0) {
+          mostrar = proximos.slice(0, 5);
+          labelTitulo = 'Próximos partidos';
+          window._todosPartidos = proximos.slice(5);
+        } else {
+          const ultimos = [...grupos].reverse();
+          mostrar = ultimos.slice(0, 5);
+          labelTitulo = 'Últimos resultados';
+          window._todosPartidos = ultimos.slice(5);
+        }
 
         titulo.textContent = labelTitulo;
 
